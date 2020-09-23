@@ -192,6 +192,12 @@ static void CheckWorkQueue(ThreadVars *tv, FlowWorkerThreadData *fw,
         BUG_ON(f->use_cnt > 0);
 #endif
 #endif
+        int test = 0;
+        if (f->use_cnt > 0) {
+            test = 1;
+            printf("leakfix BUG use_cnt %p\n", f);
+            fflush(stdout);
+        }
         /* no one is referring to this flow, use_cnt 0, removed from hash
          * so we can unlock it and pass it to the flow recycler */
 
@@ -204,6 +210,10 @@ static void CheckWorkQueue(ThreadVars *tv, FlowWorkerThreadData *fw,
             FlowSparePoolReturnFlow(f);
         } else {
             FlowQueuePrivatePrependFlow(&fw->fls.spare_queue, f);
+        }
+        if (test > 0) {
+            printf("leakfix BUG use_cnt2 %p\n", f);
+            fflush(stdout);
         }
 // TODO 20200503 we can get here with use_cnt > 0. How does it work wrt timeout? Should we not queue it? But what then?
     }
@@ -365,6 +375,7 @@ static inline void FlowWorkerStreamTCPUpdate(ThreadVars *tv, FlowWorkerThreadDat
     FLOWWORKER_PROFILING_END(p, PROFILE_FLOWWORKER_STREAM);
 
     if (FlowChangeProto(p->flow)) {
+        printf("leakfix FlowWorkerStreamTCPUpdate %p\n", p->flow);
         StreamTcpDetectLogFlush(tv, fw->stream_thread, p->flow, p, &fw->pq);
         AppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TS);
         AppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TC);

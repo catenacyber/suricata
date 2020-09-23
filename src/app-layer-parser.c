@@ -1196,7 +1196,7 @@ int AppLayerParserParse(ThreadVars *tv, AppLayerParserThreadCtx *alp_tctx, Flow 
     if (flags & STREAM_GAP) {
         if (!(p->option_flags & APP_LAYER_PARSER_OPT_ACCEPT_GAPS)) {
             SCLogDebug("app-layer parser does not accept gaps");
-            if (f->alstate != NULL) {
+            if (f->alstate != NULL && !FlowChangeProto(f)) {
                 AppLayerParserStreamTruncated(f->proto, alproto, f->alstate,
                         flags);
             }
@@ -1215,7 +1215,18 @@ int AppLayerParserParse(ThreadVars *tv, AppLayerParserThreadCtx *alp_tctx, Flow 
 
     alstate = f->alstate;
     if (alstate == NULL || FlowChangeProto(f)) {
+        if (alstate != NULL) {
+            if (f->flags & FLOW_CHANGE_PROTO_DEBUG) {
+                printf("leakfix BUG realloc1 %x %p %p %p\n", f->flags, f, f->alstate, f->alparser);
+                fflush(stdout);
+            }
+            printf("leakfix realloc1 %x %p %p %p\n", f->flags, f, f->alstate, f->alparser);
+            f->flags |= FLOW_CHANGE_PROTO_DEBUG;
+        }
         f->alstate = alstate = p->StateAlloc(alstate, f->alproto_orig);
+        if (f->flags & FLOW_CHANGE_PROTO_DEBUG) {
+            printf("leakfix realloc2 %x %p %p %p\n", f->flags, f, f->alstate, f->alparser);
+        }
         if (alstate == NULL)
             goto error;
         SCLogDebug("alloced new app layer state %p (name %s)",
@@ -1456,6 +1467,7 @@ void AppLayerParserStateProtoCleanup(
 
     AppLayerParserProtoCtx *ctx = &alp_ctx.ctxs[protomap][alproto];
 
+    //printf("leakfix free2 %p %p\n", alstate, pstate);
     if (ctx->StateFree != NULL && alstate != NULL)
         ctx->StateFree(alstate);
 
@@ -1468,6 +1480,7 @@ void AppLayerParserStateProtoCleanup(
 
 void AppLayerParserStateCleanup(const Flow *f, void *alstate, AppLayerParserState *pstate)
 {
+    //printf("leakfix free %p %p %p\n", f, alstate, pstate);
     AppLayerParserStateProtoCleanup(f->protomap, f->alproto, alstate, pstate);
 }
 

@@ -108,6 +108,8 @@ typedef struct AppLayerParserState_ AppLayerParserState;
 /** Indicate that the flow did trigger an expectation creation */
 #define FLOW_HAS_EXPECTATION            BIT_U32(27)
 
+#define FLOW_CHANGE_PROTO_DEBUG         BIT_U32(28)
+
 /* File flags */
 
 #define FLOWFILE_INIT                   0

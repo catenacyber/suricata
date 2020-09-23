@@ -967,6 +967,7 @@ static AppLayerResult HTPHandleResponseData(Flow *f, void *htp_state,
                                 dp = (uint16_t)tx->request_port_number;
                             }
                             consumed = htp_connp_res_data_consumed(hstate->connp);
+                            printf("leakfix AppLayerRequestProtocolChange ALPROTO_HTTP2\n");
                             AppLayerRequestProtocolChange(hstate->f, dp, ALPROTO_HTTP2);
                             // During HTTP2 upgrade, we may consume the HTTP1 part of the data
                             // and we need to parser the remaining part with HTTP2
@@ -2207,6 +2208,7 @@ static int HTPCallbackResponse(htp_tx_t *tx)
                 dp = (uint16_t)tx->request_port_number;
             }
             // both ALPROTO_HTTP and ALPROTO_TLS are normal options
+            printf("leakfix AppLayerRequestProtocolChange HTP_M_CONNECT\n");
             AppLayerRequestProtocolChange(hstate->f, dp, ALPROTO_UNKNOWN);
             tx->request_progress = HTP_REQUEST_COMPLETE;
             tx->response_progress = HTP_RESPONSE_COMPLETE;

@@ -153,6 +153,10 @@ static void DisableAppLayer(ThreadVars *tv, Flow *f, Packet *p)
 {
     SCLogDebug("disable app layer for flow %p alproto %u ts %u tc %u",
             f, f->alproto, f->alproto_ts, f->alproto_tc);
+    if (FlowChangeProto(f)) {
+    printf("leakfix disable app layer for flow %p %p alproto %u ts %u tc %u\n",
+           f, f->alstate, f->alproto, f->alproto_ts, f->alproto_tc);
+    }
     FlowCleanupAppLayer(f);
     StreamTcpDisableAppLayer(f);
     TcpSession *ssn = f->protoctx;
@@ -172,6 +176,11 @@ static void DisableAppLayer(ThreadVars *tv, Flow *f, Packet *p)
         }
         FlagPacketFlow(p, f, STREAM_TOSERVER);
     }
+    if (FlowChangeProto(f)) {
+        printf("leakfix disabled app layer for flow %p %p alproto %u ts %u tc %u\n",
+               f, f->alstate, f->alproto, f->alproto_ts, f->alproto_tc);
+    }
+
     SCLogDebug("disabled app layer for flow %p alproto %u ts %u tc %u",
             f, f->alproto, f->alproto_ts, f->alproto_tc);
 }
@@ -441,6 +450,7 @@ static int TCPProtoDetect(ThreadVars *tv,
              * hasn't managed to send data from the other direction
              * to the app layer. */
             if (first_data_dir && !(first_data_dir & flags)) {
+                printf("leakfix FlowCleanupAppLayer %p\n", f);
                 FlowCleanupAppLayer(f);
                 StreamTcpResetStreamFlagAppProtoDetectionCompleted(*stream);
                 FLOW_RESET_PP_DONE(f, flags);
@@ -624,12 +634,17 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
      * only run the proto detection once. */
     if (alproto == ALPROTO_UNKNOWN && (flags & STREAM_START)) {
         /* run protocol detection */
+        if (FlowChangeProto(f)) {
+            printf("leakfix BUG ALPROTO_UNKNOWN %p %p %p\n", f, f->alstate, f->alparser);
+            fflush(stdout);
+        }
         if (TCPProtoDetect(tv, ra_ctx, app_tctx, p, f, ssn, stream,
                            data, data_len, flags) != 0) {
             goto failure;
         }
     } else if (alproto != ALPROTO_UNKNOWN && FlowChangeProto(f)) {
         f->alproto_orig = f->alproto;
+        printf("leakfix protocol change, old %s, expect %s %p %p %p\n", AppProtoToString(f->alproto_orig), AppProtoToString(f->alproto_expect), f, f->alstate, f->alparser);
         SCLogDebug("protocol change, old %s", AppProtoToString(f->alproto_orig));
         void *alstate_orig = f->alstate;
         AppLayerParserState *alparser = f->alparser;
@@ -641,19 +656,42 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
         int rd = TCPProtoDetect(tv, ra_ctx, app_tctx, p, f, ssn, stream, data, data_len, flags);
         if (f->alproto == ALPROTO_UNKNOWN) {
             // not enough data, revert AppLayerProtoDetectReset to rerun detection
+            printf("leakfix not enough data %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
+            if (alstate_orig != f->alstate) {
+                printf("leakfix BUG not enough data %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
+                fflush(stdout);
+            }
             f->alparser = alparser;
             f->alproto = f->alproto_orig;
             f->alproto_tc = f->alproto_orig;
             f->alproto_ts = f->alproto_orig;
         } else {
+            if (alstate_orig == f->alstate && rd == 0) {
+                printf("leakfix BUG proto no state %p %p %p\n", f, f->alstate, f->alparser);
+                fflush(stdout);
+            }
+            printf("leakfix FlowUnsetChangeProtoFlag %p %p %p\n", f, f->alstate, f->alparser);
             FlowUnsetChangeProtoFlag(f);
+            f->flags &= ~FLOW_CHANGE_PROTO_DEBUG;
             AppLayerParserStateProtoCleanup(f->protomap, f->alproto_orig, alstate_orig, alparser);
+            printf("leakfix FlowUnsetChangeProtoFlag2 %p %p %p\n", f, f->alstate, f->alparser);
         }
         if (rd != 0) {
+            if (f->alproto == ALPROTO_UNKNOWN) {
+                printf("leakfix BUG detect failure %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
+                fflush(stdout);
+            }
+            if (alstate_orig != f->alstate) {
+                printf("leakfix BUG2 detect failure %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
+                fflush(stdout);
+            }
+            printf("leakfix proto detect failure %p %p %p\n", f, f->alstate, f->alparser);
             SCLogDebug("proto detect failure");
             f->alstate = NULL;
             goto failure;
         }
+        printf("leakfix protocol change, old %s, new %s\n",
+                   AppProtoToString(f->alproto_orig), AppProtoToString(f->alproto));
         SCLogDebug("protocol change, old %s, new %s",
                 AppProtoToString(f->alproto_orig), AppProtoToString(f->alproto));
 
