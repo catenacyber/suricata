@@ -911,6 +911,69 @@ jobs:
       - run: AFL_HARDEN=1 ac_cv_func_realloc_0_nonnull=yes ac_cv_func_malloc_0_nonnull=yes CFLAGS="-fsanitize=address -fno-omit-frame-pointer" CXXFLAGS=$CFLAGS CC=afl-clang-fast CXX=afl-clang-fast++ ./configure --enable-fuzztargets --disable-shared
       - run: AFL_HARDEN=1 make -j2
 
+  # test build with clang and fuzztargets
+  ubuntu-20-04-fuzz:
+    name: Ubuntu 20.04 (Fuzz)
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
+    needs: prep
+    steps:
+
+      # Cache Rust stuff.
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry
+
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run: bash $HOME/.cargo/env
+      - run: rustup component add rust-src
+      - name: Install dependencies
+        run: |
+          apt update
+          apt -y install \
+                libpcre3 \
+                libpcre3-dev \
+                build-essential \
+                autoconf \
+                automake \
+                curl \
+                git \
+                libtool \
+                libpcap-dev \
+                libnet1-dev \
+                libyaml-0-2 \
+                libyaml-dev \
+                libcap-ng-dev \
+                libcap-ng0 \
+                libmagic-dev \
+                libnetfilter-queue-dev \
+                libnetfilter-queue1 \
+                libnfnetlink-dev \
+                libnfnetlink0 \
+                libhiredis-dev \
+                libjansson-dev \
+                libjansson-dev \
+                libpython2.7 \
+                make \
+                software-properties-common \
+                zlib1g \
+                zlib1g-dev
+      - name: Install cbindgen
+        run: cargo install --force --debug --version 0.14.1 cbindgen
+      - run: echo "::add-path::$HOME/.cargo/bin"
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+        with:
+          name: prep
+          path: prep
+      - run: tar xf prep/libhtp.tar.gz
+      - run: ./autogen.sh
+      - run: CC=clang CFLAGS="-fsanitize=memory -fsanitize=fuzzer-no-link" ./configure --enable-fuzztargets --disable-shared
+      - run: make -j2
+      - run: make check
+
   # An Ubuntu 16.04 build using the tarball generated in the CentOS 8
   # build above.
   ubuntu-16-04:
