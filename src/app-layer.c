@@ -674,6 +674,9 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
             FlowUnsetChangeProtoFlag(f);
             f->flags &= ~FLOW_CHANGE_PROTO_DEBUG;
             AppLayerParserStateProtoCleanup(f->protomap, f->alproto_orig, alstate_orig, alparser);
+            if (alstate_orig == f->alstate) {
+                f->alstate = NULL;
+            }
             printf("leakfix FlowUnsetChangeProtoFlag2 %p %p %p\n", f, f->alstate, f->alparser);
         }
         if (rd != 0) {
@@ -681,13 +684,8 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
                 printf("leakfix BUG detect failure %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
                 fflush(stdout);
             }
-            if (alstate_orig != f->alstate) {
-                printf("leakfix BUG2 detect failure %p %p %p %p\n", alstate_orig, f, f->alstate, f->alparser);
-                fflush(stdout);
-            }
             printf("leakfix proto detect failure %p %p %p\n", f, f->alstate, f->alparser);
             SCLogDebug("proto detect failure");
-            f->alstate = NULL;
             goto failure;
         }
         printf("leakfix protocol change, old %s, new %s\n",
