@@ -926,9 +926,6 @@ jobs:
           path: ~/.cargo/registry
           key: cargo-registry
 
-      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
-      - run: bash $HOME/.cargo/env
-      - run: rustup component add rust-src
       - name: Install dependencies
         run: |
           apt update
@@ -960,6 +957,9 @@ jobs:
                 software-properties-common \
                 zlib1g \
                 zlib1g-dev
+      - run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
+      - run: bash $HOME/.cargo/env
+      - run: rustup component add rust-src
       - name: Install cbindgen
         run: cargo install --force --debug --version 0.14.1 cbindgen
       - run: echo "::add-path::$HOME/.cargo/bin"
