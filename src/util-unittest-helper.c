@@ -226,105 +226,6 @@ error:
 }
 
 /**
- * \brief UTHBuildPacketReal is a function that create tcp/udp packets for unittests
- * specifying ip and port sources and destinations
- *
- * \param payload pointer to the payloadd buffer
- * \param payload_len pointer to the length of the payload
- * \param ipproto Protocols allowed atm are IPPROTO_TCP and IPPROTO_UDP
- * \param src pointer to a string containing the ip source
- * \param dst pointer to a string containing the ip destination
- * \param sport pointer to a string containing the port source
- * \param dport pointer to a string containing the port destination
- *
- * \retval Packet pointer to the built in packet
- */
-Packet *UTHBuildPacketReal(uint8_t *payload, uint16_t payload_len,
-                           uint8_t ipproto, const char *src, const char *dst,
-                           uint16_t sport, uint16_t dport)
-{
-    struct in_addr in;
-
-    Packet *p = PacketGetFromAlloc();
-    if (unlikely(p == NULL))
-        return NULL;
-
-    struct timeval tv;
-    TimeGet(&tv);
-    COPY_TIMESTAMP(&tv, &p->ts);
-
-    p->src.family = AF_INET;
-    p->dst.family = AF_INET;
-    p->payload = payload;
-    p->payload_len = payload_len;
-    p->proto = ipproto;
-
-    if (inet_pton(AF_INET, src, &in) != 1)
-        goto error;
-    p->src.addr_data32[0] = in.s_addr;
-    p->sp = sport;
-
-    if (inet_pton(AF_INET, dst, &in) != 1)
-        goto error;
-    p->dst.addr_data32[0] = in.s_addr;
-    p->dp = dport;
-
-    p->ip4h = (IPV4Hdr *)GET_PKT_DATA(p);
-    if (p->ip4h == NULL)
-        goto error;
-
-    p->ip4h->s_ip_src.s_addr = p->src.addr_data32[0];
-    p->ip4h->s_ip_dst.s_addr = p->dst.addr_data32[0];
-    p->ip4h->ip_proto = ipproto;
-    p->ip4h->ip_verhl = sizeof(IPV4Hdr);
-    p->proto = ipproto;
-
-    int hdr_offset = sizeof(IPV4Hdr);
-    switch (ipproto) {
-        case IPPROTO_UDP:
-            p->udph = (UDPHdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
-            if (p->udph == NULL)
-                goto error;
-
-            p->udph->uh_sport = sport;
-            p->udph->uh_dport = dport;
-            hdr_offset += sizeof(UDPHdr);
-            break;
-        case IPPROTO_TCP:
-            p->tcph = (TCPHdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
-            if (p->tcph == NULL)
-                goto error;
-
-            p->tcph->th_sport = htons(sport);
-            p->tcph->th_dport = htons(dport);
-            hdr_offset += sizeof(TCPHdr);
-            break;
-        case IPPROTO_ICMP:
-            p->icmpv4h = (ICMPV4Hdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
-            if (p->icmpv4h == NULL)
-                goto error;
-
-            hdr_offset += sizeof(ICMPV4Hdr);
-            break;
-        default:
-            break;
-        /* TODO: Add more protocols */
-    }
-
-    if (payload && payload_len) {
-        PacketCopyDataOffset(p, hdr_offset, payload, payload_len);
-    }
-    SET_PKT_LEN(p, hdr_offset + payload_len);
-    p->payload = GET_PKT_DATA(p)+hdr_offset;
-
-    return p;
-
-error:
-    SCFree(p);
-    return NULL;
-}
-
-/**
  * \brief UTHBuildPacket is a wrapper that build packets with default ip
  * and port fields
  *
@@ -1213,3 +1114,101 @@ void UTHRegisterTests(void)
 #endif /* UNITTESTS */
 }
 
+/**
+ * \brief UTHBuildPacketReal is a function that create tcp/udp packets for unittests
+ * specifying ip and port sources and destinations
+ *
+ * \param payload pointer to the payloadd buffer
+ * \param payload_len pointer to the length of the payload
+ * \param ipproto Protocols allowed atm are IPPROTO_TCP and IPPROTO_UDP
+ * \param src pointer to a string containing the ip source
+ * \param dst pointer to a string containing the ip destination
+ * \param sport pointer to a string containing the port source
+ * \param dport pointer to a string containing the port destination
+ *
+ * \retval Packet pointer to the built in packet
+ */
+Packet *UTHBuildPacketReal(uint8_t *payload, uint16_t payload_len,
+                           uint8_t ipproto, const char *src, const char *dst,
+                           uint16_t sport, uint16_t dport)
+{
+    struct in_addr in;
+
+    Packet *p = PacketGetFromAlloc();
+    if (unlikely(p == NULL))
+        return NULL;
+
+    struct timeval tv;
+    TimeGet(&tv);
+    COPY_TIMESTAMP(&tv, &p->ts);
+
+    p->src.family = AF_INET;
+    p->dst.family = AF_INET;
+    p->payload = payload;
+    p->payload_len = payload_len;
+    p->proto = ipproto;
+
+    if (inet_pton(AF_INET, src, &in) != 1)
+        goto error;
+    p->src.addr_data32[0] = in.s_addr;
+    p->sp = sport;
+
+    if (inet_pton(AF_INET, dst, &in) != 1)
+        goto error;
+    p->dst.addr_data32[0] = in.s_addr;
+    p->dp = dport;
+
+    p->ip4h = (IPV4Hdr *)GET_PKT_DATA(p);
+    if (p->ip4h == NULL)
+        goto error;
+
+    p->ip4h->s_ip_src.s_addr = p->src.addr_data32[0];
+    p->ip4h->s_ip_dst.s_addr = p->dst.addr_data32[0];
+    p->ip4h->ip_proto = ipproto;
+    p->ip4h->ip_verhl = sizeof(IPV4Hdr);
+    p->proto = ipproto;
+
+    int hdr_offset = sizeof(IPV4Hdr);
+    switch (ipproto) {
+        case IPPROTO_UDP:
+            p->udph = (UDPHdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
+            if (p->udph == NULL)
+                goto error;
+
+            p->udph->uh_sport = sport;
+            p->udph->uh_dport = dport;
+            hdr_offset += sizeof(UDPHdr);
+            break;
+        case IPPROTO_TCP:
+            p->tcph = (TCPHdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
+            if (p->tcph == NULL)
+                goto error;
+
+            p->tcph->th_sport = htons(sport);
+            p->tcph->th_dport = htons(dport);
+            hdr_offset += sizeof(TCPHdr);
+            break;
+        case IPPROTO_ICMP:
+            p->icmpv4h = (ICMPV4Hdr *)(GET_PKT_DATA(p) + sizeof(IPV4Hdr));
+            if (p->icmpv4h == NULL)
+                goto error;
+
+            hdr_offset += sizeof(ICMPV4Hdr);
+            break;
+        default:
+            break;
+        /* TODO: Add more protocols */
+    }
+
+    if (payload && payload_len) {
+        PacketCopyDataOffset(p, hdr_offset, payload, payload_len);
+    }
+    SET_PKT_LEN(p, hdr_offset + payload_len);
+    p->payload = GET_PKT_DATA(p)+hdr_offset;
+
+    return p;
+
+error:
+    SCFree(p);
+    return NULL;
+}

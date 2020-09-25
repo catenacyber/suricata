@@ -27,11 +27,12 @@
 #if defined(UNITTESTS) || defined(FUZZ)
 Flow *TestHelperBuildFlow(int family, const char *src, const char *dst, Port sp, Port dp);
 int TestHelperBufferToFile(const char *name, const uint8_t *data, size_t size);
+Packet *UTHBuildPacketReal(uint8_t *, uint16_t, uint8_t ipproto, const char *, const char *, uint16_t, uint16_t);
+void UTHFreePacket(Packet *);
 #endif
 #ifdef UNITTESTS
 uint32_t UTHSetIPv4Address(const char *);
 
-Packet *UTHBuildPacketReal(uint8_t *, uint16_t, uint8_t ipproto, const char *, const char *, uint16_t, uint16_t);
 Packet *UTHBuildPacket(uint8_t *, uint16_t, uint8_t ipproto);
 Packet *UTHBuildPacketSrcDst(uint8_t *, uint16_t, uint8_t ipproto, const char *, const char *);
 Packet *UTHBuildPacketSrcDstPorts(uint8_t *, uint16_t, uint8_t ipproto, uint16_t, uint16_t);
@@ -42,7 +43,6 @@ int UTHPacketMatchSigMpm(Packet *, char *, uint16_t);
 Packet **UTHBuildPacketArrayFromEth(uint8_t **, int *, int);
 Packet *UTHBuildPacketFromEth(uint8_t *, uint16_t);
 
-void UTHFreePacket(Packet *);
 void UTHFreePackets(Packet **, int);
 
 void UTHAssignFlow(Packet *p, Flow *f);

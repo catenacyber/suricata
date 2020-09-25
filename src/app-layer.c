@@ -670,7 +670,7 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
                 printf("leakfix BUG proto no state %p %p %p\n", f, f->alstate, f->alparser);
                 fflush(stdout);
             }
-            printf("leakfix FlowUnsetChangeProtoFlag %p %p %p\n", f, f->alstate, f->alparser);
+            printf("leakfix FlowUnsetChangeProtoFlag %x %x %p %p %p\n", flags, f->alproto, f, f->alstate, f->alparser);
             FlowUnsetChangeProtoFlag(f);
             f->flags &= ~FLOW_CHANGE_PROTO_DEBUG;
             AppLayerParserStateProtoCleanup(f->protomap, f->alproto_orig, alstate_orig, alparser);
