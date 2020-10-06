@@ -1901,6 +1901,14 @@ void AppLayerRequestProtocolChange(Flow *f, uint16_t dp, AppProto expect_proto)
     FlowSetChangeProtoFlag(f);
     f->protodetect_dp = dp;
     f->alproto_expect = expect_proto;
+    DEBUG_VALIDATE_BUG_ON(f->alproto == ALPROTO_UNKNOWN);
+    // If one side is unknown yet, set it to the other known side
+    if (f->alproto_ts == ALPROTO_UNKNOWN) {
+        f->alproto_ts = f->alproto;
+    }
+    if (f->alproto_tc == ALPROTO_UNKNOWN) {
+        f->alproto_tc = f->alproto;
+    }
 }
 
 /** \brief request applayer to wrap up this protocol and rerun protocol
