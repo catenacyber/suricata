@@ -621,6 +621,7 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
      * We receive 2 stream init msgs (one for each direction) but we
      * only run the proto detection once. */
     if (alproto == ALPROTO_UNKNOWN && (flags & STREAM_START)) {
+        DEBUG_VALIDATE_BUG_ON(FlowChangeProto(f));
         /* run protocol detection */
         if (TCPProtoDetect(tv, ra_ctx, app_tctx, p, f, ssn, stream,
                            data, data_len, flags) != 0) {
