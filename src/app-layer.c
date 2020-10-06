@@ -628,7 +628,6 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
             goto failure;
         }
     } else if (alproto != ALPROTO_UNKNOWN && FlowChangeProto(f)) {
-        f->alproto_orig = f->alproto;
         SCLogDebug("protocol change, old %s", AppProtoToString(f->alproto_orig));
         void *alstate_orig = f->alstate;
         AppLayerParserState *alparser = f->alparser;

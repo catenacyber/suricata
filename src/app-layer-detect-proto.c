@@ -61,6 +61,7 @@
 #include "util-memcmp.h"
 #include "util-spm.h"
 #include "util-debug.h"
+#include "util-validate.h"
 
 #include "runmodes.h"
 
@@ -1902,6 +1903,7 @@ void AppLayerRequestProtocolChange(Flow *f, uint16_t dp, AppProto expect_proto)
     f->protodetect_dp = dp;
     f->alproto_expect = expect_proto;
     DEBUG_VALIDATE_BUG_ON(f->alproto == ALPROTO_UNKNOWN);
+    f->alproto_orig = f->alproto;
     // If one side is unknown yet, set it to the other known side
     if (f->alproto_ts == ALPROTO_UNKNOWN) {
         f->alproto_ts = f->alproto;
