@@ -70,6 +70,8 @@ struct AppLayerThreadCtx_ {
 #endif
 };
 
+#define FLOW_PROTO_CHANGE_MAX_DEPTH 4096
+
 #define MAX_COUNTER_SIZE 64
 typedef struct AppLayerCounterNames_ {
     char name[MAX_COUNTER_SIZE];
@@ -635,7 +637,11 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
         StreamTcpResetStreamFlagAppProtoDetectionCompleted(&ssn->server);
         /* rerun protocol detection */
         int rd = TCPProtoDetect(tv, ra_ctx, app_tctx, p, f, ssn, stream, data, data_len, flags);
-        if (f->alproto == ALPROTO_UNKNOWN) {
+        /* TCPProtoDetectCheckBailConditions does not work well because
+         * size_tc from STREAM_RIGHT_EDGE is not reset to zero
+         * so, we set a lower limit to the data we inspect
+         */
+        if (f->alproto == ALPROTO_UNKNOWN && data_len < FLOW_PROTO_CHANGE_MAX_DEPTH) {
             DEBUG_VALIDATE_BUG_ON(alstate_orig != f->alstate);
             // not enough data, revert AppLayerProtoDetectReset to rerun detection
             f->alparser = alparser;
@@ -643,6 +649,10 @@ int AppLayerHandleTCPData(ThreadVars *tv, TcpReassemblyThreadCtx *ra_ctx,
             f->alproto_tc = f->alproto_orig;
             f->alproto_ts = f->alproto_orig;
         } else {
+            if (f->alproto == ALPROTO_UNKNOWN) {
+                // Failed detection of new protocol after much data
+                DisableAppLayer(tv, f, p);
+            }
             FlowUnsetChangeProtoFlag(f);
             AppLayerParserStateProtoCleanup(f->protomap, f->alproto_orig, alstate_orig, alparser);
             if (alstate_orig == f->alstate) {
