@@ -553,7 +553,9 @@ static int TCPProtoDetect(ThreadVars *tv,
             }
         } else {
             /* both sides unknown, let's see if we need to give up */
-            TCPProtoDetectCheckBailConditions(tv, f, ssn, p);
+            if ((flags & STREAM_EOF) == 0) {
+                TCPProtoDetectCheckBailConditions(tv, f, ssn, p);
+            }
         }
     }
     SCReturnInt(0);
