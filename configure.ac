@@ -605,27 +605,27 @@
         LIBS="${TMPLIBS} -lz"
     fi
 
-  #libpcre
-    AC_ARG_WITH(libpcre_includes,
-            [  --with-libpcre-includes=DIR  libpcre include directory],
-            [with_libpcre_includes="$withval"],[with_libpcre_includes="no"])
-    AC_ARG_WITH(libpcre_libraries,
-            [  --with-libpcre-libraries=DIR    libpcre library directory],
-            [with_libpcre_libraries="$withval"],[with_libpcre_libraries="no"])
+  #libpcre2
+    AC_ARG_WITH(libpcre2_includes,
+            [  --with-libpcre2-includes=DIR  libpcre2 include directory],
+            [with_libpcre2_includes="$withval"],[with_libpcre2_includes="no"])
+    AC_ARG_WITH(libpcre2_libraries,
+            [  --with-libpcre2-libraries=DIR    libpcre2 library directory],
+            [with_libpcre2_libraries="$withval"],[with_libpcre2_libraries="no"])
 
-    if test "$with_libpcre_includes" != "no"; then
-        CPPFLAGS="${CPPFLAGS} -I${with_libpcre_includes}"
+    if test "$with_libpcre2_includes" != "no"; then
+        CPPFLAGS="${CPPFLAGS} -I${with_libpcre2_includes}"
     fi
-    AC_CHECK_HEADER(pcre.h,,[AC_MSG_ERROR(pcre.h not found ...)])
+    AC_CHECK_HEADER(pcre2.h,,[AC_MSG_ERROR(pcre2.h not found ...)])
 
-    if test "$with_libpcre_libraries" != "no"; then
-        LDFLAGS="${LDFLAGS} -L${with_libpcre_libraries}"
+    if test "$with_libpcre2_libraries" != "no"; then
+        LDFLAGS="${LDFLAGS} -L${with_libpcre2_libraries}"
     fi
-    PCRE=""
-    AC_CHECK_LIB(pcre, pcre_get_substring,,PCRE="no")
-    if test "$PCRE" = "no"; then
+    PCRE2=""
+    AC_CHECK_LIB(pcre2, pcre2_substring_get_bynumber,,PCRE2="no")
+    if test "$PCRE2" = "no"; then
         echo
-        echo "   ERROR!  pcre library not found, go get it"
+        echo "   ERROR!  pcre2 library not found, go get it"
         echo "   from www.pcre.org. Or from packages:"
         echo "   Debian/Ubuntu: apt install libpcre2-dev"
         echo "   Fedora: dnf install pcre2-devel"
@@ -634,152 +634,80 @@
         exit 1
     fi
 
-    # libpcre 8.35 (especially on debian) has a known issue that results in segfaults
-    # see https://redmine.openinfosecfoundation.org/issues/1693
-    if test "$with_libpcre_libraries" = "no"; then
-        PKG_CHECK_MODULES(LIBPCREVERSION, [libpcre = 8.35],[libpcre_buggy_found="yes"],[libprce_buggy_found="no"])
-        if test "$libpcre_buggy_found" = "yes"; then
-            echo
-            echo "   Warning! vulnerable libpcre version 8.35 found"
-            echo "   This version has a known issue that could result in segfaults"
-            echo "   please upgrade to a newer version of pcre which you can get from"
-            echo "   www.pcre.org. For more information, see issue #1693"
-            echo
-            echo "   Continuing for now with JIT disabled..."
-            echo
-        fi
-    fi
-
-    # To prevent duping the lib link we reset LIBS after this check. Setting action-if-found to NULL doesn't seem to work
-    # see: http://blog.flameeyes.eu/2008/04/29/i-consider-ac_check_lib-harmful
-    PCRE=""
-    TMPLIBS="${LIBS}"
-    AC_CHECK_LIB(pcre, pcre_dfa_exec,, PCRE="no")
-    if test "$PCRE" = "no"; then
-        echo
-        echo "   ERROR!  pcre library was found but version was < 6.0"
-        echo "   please upgrade to a newer version of pcre which you can get from"
-        echo "   www.pcre.org."
-        echo
-        exit 1
-    fi
-    LIBS="${TMPLIBS}"
-
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre.h> ]],
-        [[ int eo = 0; eo |= PCRE_EXTRA_MATCH_LIMIT_RECURSION; ]])],
-        [ pcre_match_limit_recursion_available=yes ],[:]
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre2.h> ]],
+        [[ int eo = 0; eo |= PCRE2_CONFIG_DEPTHLIMIT; ]])],
+        [ pcre2_depth_limit_available=yes ],[:]
     )
-    if test "$pcre_match_limit_recursion_available" != "yes"; then
+    if test "$pcre2_depth_limit_available" != "yes"; then
         echo
-        echo "   Warning! pcre extra opt PCRE_EXTRA_MATCH_LIMIT_RECURSION not found"
-        echo "   This could lead to potential DoS please upgrade to pcre >= 6.5"
-        echo "   from www.pcre.org."
+        echo "   Warning! pcre2 PCRE2_CONFIG_DEPTHLIMIT not found"
         echo "   Continuing for now...."
         echo
-        AC_DEFINE([NO_PCRE_MATCH_RLIMIT],[1],[Pcre PCRE_EXTRA_MATCH_LIMIT_RECURSION not available])
+        AC_DEFINE([NO_PCRE2_MATCH_RLIMIT],[1],[Pcre2 PCRE2_CONFIG_DEPTHLIMIT not available])
     fi
 
-    TMPCFLAGS="${CFLAGS}"
-    CFLAGS="-O0 -g -Werror -Wall"
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre.h> ]],
-        [[ pcre_extra *extra = NULL; pcre_free_study(extra); ]])],
-        [ AC_DEFINE([HAVE_PCRE_FREE_STUDY], [1], [Pcre pcre_free_study supported])],[:]
-    )
-    CFLAGS="${TMPCFLAGS}"
-
-    #enable support for PCRE-jit available since pcre-8.20
-    AC_MSG_CHECKING(for PCRE JIT support)
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre.h> ]],
+    #enable support for PCRE2-jit available
+    AC_MSG_CHECKING(for PCRE2 JIT support)
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre2.h> ]],
         [[
         int jit = 0;
-        pcre_config(PCRE_CONFIG_JIT, &jit);
-        ]])],[ pcre_jit_available=yes ],[ pcre_jit_available=no ]
+        pcre2_config(PCRE2_CONFIG_JIT, &jit);
+        ]])],[ pcre2_jit_available=yes ],[ pcre2_jit_available=no ]
         )
 
-    case $host in
-        *powerpc64*)
-            PKG_CHECK_MODULES(LIBPCREVERSION, [libpcre = 8.39],[libpcre_ppc64_buggy_found1="yes"],[libprce_ppc64_buggy_found1="no"])
-            PKG_CHECK_MODULES(LIBPCREVERSION, [libpcre = 8.40],[libpcre_ppc64_buggy_found2="yes"],[libprce_ppc64_buggy_found2="no"])
-
-            if test "$libprce_ppc64_buggy_found1" = "yes" || test "$libprce_ppc64_buggy_found2"; then
-                # on powerpc64, both gcc and clang lead to SIGILL in
-                # unittests when jit is enabled.
-                pcre_jit_available="no, pcre 8.39/8.40 jit disabled for powerpc64"
-            fi
-            # hack: use libatomic
-            LIBS="${LIBS} -latomic"
-        ;;
-        *)
-            # bug 1693, libpcre 8.35 is broken and debian jessie is still using that
-            if test "$libpcre_buggy_found" = "yes"; then
-                pcre_jit_available="no, libpcre 8.35 blacklisted"
-            fi
-        ;;
-    esac
-
-    if test "x$pcre_jit_available" = "xyes"; then
+    if test "x$pcre2_jit_available" = "xyes"; then
        AC_MSG_RESULT(yes)
-       AC_DEFINE([PCRE_HAVE_JIT], [1], [Pcre with JIT compiler support enabled])
-
-       AC_MSG_CHECKING(for PCRE JIT support usability)
-       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ #include <pcre.h> ]],
-           [[
-           const char *error;
-           int err_offset;
-           pcre *re = pcre_compile("(a|b|c|d)",0, &error, &err_offset,NULL);
-           pcre_extra *extra = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
-           if (extra == NULL)
-               exit(EXIT_FAILURE);
-           int jit = 0;
-           int ret = pcre_fullinfo(re, extra, PCRE_INFO_JIT, &jit);
-           if (ret != 0 || jit != 1)
-               exit(EXIT_FAILURE);
-           exit(EXIT_SUCCESS);
-           ]])],[ pcre_jit_works=yes ],[:]
-       )
-       if test "x$pcre_jit_works" != "xyes"; then
-           AC_MSG_RESULT(no)
-           echo
-           echo "   PCRE JIT support detection worked but testing it failed"
-           echo "   something odd is going on, please file a bug report."
-           echo
-           exit 1
-       else
-           AC_MSG_RESULT(yes)
-       fi
+       AC_DEFINE([PCRE2_HAVE_JIT], [1], [Pcre2 with JIT compiler support enabled])
     else
         AC_MSG_RESULT(no)
     fi
 
-    if test "x$pcre_jit_works" = "xyes"; then
+    if test "x$pcre2_jit_works" = "xyes"; then
 
-       AC_MSG_CHECKING(for PCRE JIT exec availability)
+       AC_MSG_CHECKING(for PCRE2 JIT exec availability)
        AC_LINK_IFELSE(
            [AC_LANG_PROGRAM(
                [
-                  #include <pcre.h>
-                  #include <string.h>
+                  #include <pcre2.h>
                ],
                [
-                   const char *error;
-                   int err_offset;
-                   pcre *re = pcre_compile("(a|b|c|d)", 0, &error, &err_offset,NULL);
-                   pcre_extra *study = pcre_study(re, PCRE_STUDY_JIT_COMPILE, &error);
-                   if (study == NULL)
-                       exit(EXIT_FAILURE);
-                   pcre_jit_stack *stack = pcre_jit_stack_alloc(32*1024,40*1024);
-                   if (stack == 0)
-                       exit(EXIT_FAILURE);
-                   int ret = pcre_jit_exec(re, study, "apple", 5, 0, 0, NULL, 0, stack);
-                   exit(ret == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+                    int rc;
+                    pcre2_code *re;
+                    pcre2_match_data *match_data;
+                    pcre2_match_context *mcontext;
+                    pcre2_jit_stack *jit_stack;
+
+                    re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED, 0,
+                        &errornumber, &erroffset, NULL);
+                    if (re == NULL)
+                        exit(EXIT_FAILURE);
+                    rc = pcre2_jit_compile(re, PCRE2_JIT_COMPLETE);
+                    if (rc != 0)
+                        exit(EXIT_FAILURE);
+                    mcontext = pcre2_match_context_create(NULL);
+                    if (mcontext == NULL)
+                        exit(EXIT_FAILURE);
+                    jit_stack = pcre2_jit_stack_create(32*1024, 512*1024, NULL);
+                    if (jit_stack == NULL)
+                        exit(EXIT_FAILURE);
+                    pcre2_jit_stack_assign(mcontext, NULL, jit_stack);
+                    match_data = pcre2_match_data_create(re, 10);
+                    rc = pcre2_match(re, subject, length, 0, 0, match_data, mcontext);
+
+                    pcre2_code_free(re);
+                    pcre2_match_data_free(match_data);
+                    pcre2_match_context_free(mcontext);
+                    pcre2_jit_stack_free(jit_stack);
+
+                    exit(rc == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
                ])],
-           [pcre_jit_exec_available="yes" ],
-           [pcre_jit_exec_available="no" ])
-       if test "x$pcre_jit_exec_available" != "xyes"; then
+           [pcre2_jit_exec_available="yes" ],
+           [pcre2_jit_exec_available="no" ])
+       if test "x$pcre2_jit_exec_available" != "xyes"; then
            AC_MSG_RESULT(no)
        else
            AC_MSG_RESULT(yes)
-           AC_DEFINE([PCRE_HAVE_JIT_EXEC], [1], [PCRE with JIT compiler support enabled supporting pcre_jit_exec])
+           AC_DEFINE([PCRE2_HAVE_JIT_EXEC], [1], [PCRE2 with JIT compiler support enabled supporting pcre2_jit_stack_create])
        fi
     else
         AC_MSG_RESULT(no)
@@ -2708,7 +2636,7 @@ SURICATA_BUILD_CONF="Suricata Configuration:
   hiredis support:                         ${enable_hiredis}
   hiredis async with libevent:             ${enable_hiredis_async}
   Prelude support:                         ${enable_prelude}
-  PCRE jit:                                ${pcre_jit_available}
+  PCRE2 jit:                               ${pcre2_jit_available}
   LUA support:                             ${enable_lua}
   libluajit:                               ${enable_luajit}
   GeoIP2 support:                          ${enable_geoip}

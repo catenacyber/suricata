@@ -1225,7 +1225,7 @@ jobs:
           libtool \
           libyaml \
           lua \
-          pcre \
+          pcre2 \
           pkg-config \
           python \
           rust \
