@@ -138,7 +138,7 @@ typedef unsigned short u_short
 typedef unsigned char u_char
 #endif
 
-#include <pcre.h>
+#include <pcre2.h>
 
 #ifdef HAVE_SYSLOG_H
 #include <syslog.h>

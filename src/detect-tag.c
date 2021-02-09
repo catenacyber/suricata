@@ -182,7 +182,7 @@ static DetectTagData *DetectTagParse(const char *tagstr)
         SCLogError(SC_ERR_INVALID_VALUE, "Invalid argument type. Must be session or host (%s)", tagstr);
         goto error;
     }
-    pcre_free_substring(str_ptr);
+    pcre2_free_substring(str_ptr);
     str_ptr = NULL;
 
     /* default tag is 256 packets from session or dst host */
@@ -204,7 +204,7 @@ static DetectTagData *DetectTagParse(const char *tagstr)
             goto error;
         }
 
-        pcre_free_substring(str_ptr);
+        pcre2_free_substring(str_ptr);
         str_ptr = NULL;
 
         res = pcre_get_substring((char *)tagstr, ov, MAX_SUBSTRINGS, 4, &str_ptr);
@@ -228,7 +228,7 @@ static DetectTagData *DetectTagParse(const char *tagstr)
             goto error;
         }
 
-        pcre_free_substring(str_ptr);
+        pcre2_free_substring(str_ptr);
         str_ptr = NULL;
 
         /* if specified, overwrite it */
@@ -253,7 +253,7 @@ static DetectTagData *DetectTagParse(const char *tagstr)
                 SCLogWarning(SC_ERR_INVALID_VALUE, "Argument direction doesn't make sense for type \"session\" (%s [%"PRIu8"])", tagstr, td.type);
             }
 
-            pcre_free_substring(str_ptr);
+            pcre2_free_substring(str_ptr);
             str_ptr = NULL;
         }
     }
@@ -269,7 +269,7 @@ static DetectTagData *DetectTagParse(const char *tagstr)
 
 error:
     if (str_ptr != NULL)
-        pcre_free_substring(str_ptr);
+        pcre2_free_substring(str_ptr);
     return NULL;
 }
 

@@ -255,7 +255,7 @@ static DetectTlsData *DetectTlsSubjectParse (DetectEngineCtx *de_ctx, const char
     if (unlikely(orig == NULL)) {
         goto error;
     }
-    pcre_free_substring(str_ptr);
+    pcre2_free_substring(str_ptr);
 
     tmp_str=orig;
 
@@ -446,7 +446,7 @@ static DetectTlsData *DetectTlsIssuerDNParse(DetectEngineCtx *de_ctx, const char
     if (unlikely(orig == NULL)) {
         goto error;
     }
-    pcre_free_substring(str_ptr);
+    pcre2_free_substring(str_ptr);
 
     tmp_str=orig;
 
@@ -578,7 +578,7 @@ static DetectTlsData *DetectTlsFingerprintParse (DetectEngineCtx *de_ctx, const 
     if (unlikely(orig == NULL)) {
         goto error;
     }
-    pcre_free_substring(str_ptr);
+    pcre2_free_substring(str_ptr);
 
     tmp_str=orig;
 

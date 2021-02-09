@@ -206,29 +206,29 @@ static DetectUrilenData *DetectUrilenParse (const char *urilenstr)
         }
     }
 
-    pcre_free_substring(arg1);
-    pcre_free_substring(arg2);
+    pcre2_free_substring(arg1);
+    pcre2_free_substring(arg2);
     if (arg3 != NULL)
-        pcre_free_substring(arg3);
+        pcre2_free_substring(arg3);
     if (arg4 != NULL)
-        pcre_free_substring(arg4);
+        pcre2_free_substring(arg4);
     if (arg5 != NULL)
-        pcre_free_substring(arg5);
+        pcre2_free_substring(arg5);
     return urilend;
 
 error:
     if (urilend)
         SCFree(urilend);
     if (arg1 != NULL)
-        pcre_free_substring(arg1);
+        pcre2_free_substring(arg1);
     if (arg2 != NULL)
-        pcre_free_substring(arg2);
+        pcre2_free_substring(arg2);
     if (arg3 != NULL)
-        pcre_free_substring(arg3);
+        pcre2_free_substring(arg3);
     if (arg4 != NULL)
-        pcre_free_substring(arg4);
+        pcre2_free_substring(arg4);
     if (arg5 != NULL)
-        pcre_free_substring(arg5);
+        pcre2_free_substring(arg5);
     return NULL;
 }
 

@@ -93,7 +93,7 @@ int SCKernelVersionIsAtLeast(int major, int minor)
         err = true;
     }
 
-    pcre_free_substring_list(list);
+    pcre2_free_substring_list(list);
     pcre_free_study(version_regex_study);
     pcre_free(version_regex);
 

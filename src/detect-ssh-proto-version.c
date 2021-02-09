@@ -180,7 +180,7 @@ static DetectSshVersionData *DetectSshVersionParse (DetectEngineCtx *de_ctx, con
         /* We have a correct id option */
         ssh = SCMalloc(sizeof(DetectSshVersionData));
         if (unlikely(ssh == NULL)) {
-            pcre_free_substring(str_ptr);
+            pcre2_free_substring(str_ptr);
             goto error;
         }
         memset(ssh, 0x00, sizeof(DetectSshVersionData));
@@ -190,17 +190,17 @@ static DetectSshVersionData *DetectSshVersionParse (DetectEngineCtx *de_ctx, con
         if (strcmp("2_compat", str_ptr) == 0) {
             ssh->flags |= SSH_FLAG_PROTOVERSION_2_COMPAT;
             SCLogDebug("will look for ssh protocol version 2 (2, 2.0, 1.99 that's considered as 2");
-            pcre_free_substring(str_ptr);
+            pcre2_free_substring(str_ptr);
             return ssh;
         }
 
         ssh->ver = (uint8_t *)SCStrdup((char*)str_ptr);
         if (ssh->ver == NULL) {
-            pcre_free_substring(str_ptr);
+            pcre2_free_substring(str_ptr);
             goto error;
         }
         ssh->len = strlen((char *) ssh->ver);
-        pcre_free_substring(str_ptr);
+        pcre2_free_substring(str_ptr);
 
         SCLogDebug("will look for ssh %s", ssh->ver);
     }

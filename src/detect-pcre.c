@@ -244,7 +244,7 @@ int DetectPcrePayloadMatch(DetectEngineThreadCtx *det_ctx, const Signature *s,
                     const char *str_ptr = NULL;
                     ret = pcre_get_substring((char *)ptr, ov, MAX_SUBSTRINGS, x+1, &str_ptr);
                     if (unlikely(ret == 0)) {
-                        pcre_free_substring(str_ptr);
+                        pcre2_free_substring(str_ptr);
                         continue;
                     }
 
@@ -256,8 +256,8 @@ int DetectPcrePayloadMatch(DetectEngineThreadCtx *det_ctx, const Signature *s,
                         const char *str_ptr2 = NULL;
                         int ret2 = pcre_get_substring((char *)ptr, ov, MAX_SUBSTRINGS, x+2, &str_ptr2);
                         if (unlikely(ret2 == 0)) {
-                            pcre_free_substring(str_ptr);
-                            pcre_free_substring(str_ptr2);
+                            pcre2_free_substring(str_ptr);
+                            pcre2_free_substring(str_ptr2);
                             break;
                         }
                         /* key length is limited to 256 chars */

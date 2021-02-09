@@ -63,7 +63,7 @@ Dependencies
 
 For Suricata's compilation you'll need the following libraries and their development headers installed::
 
-  libjansson, libpcap, libpcre, libmagic, zlib, libyaml
+  libjansson, libpcap, libpcre2, libmagic, zlib, libyaml
 
 The following tools are required::
 

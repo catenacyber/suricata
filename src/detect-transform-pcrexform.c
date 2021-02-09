@@ -113,7 +113,7 @@ static void DetectTransformPcrexform(InspectionBuffer *buffer, void *options)
 
         if (ret >= 0) {
             InspectionBufferCopy(buffer, (uint8_t *)str, (uint32_t) ret);
-            pcre_free_substring(str);
+            pcre2_free_substring(str);
         }
     }
 }

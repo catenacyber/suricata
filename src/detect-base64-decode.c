@@ -158,13 +158,13 @@ static int DetectBase64DecodeParse(const char *str, uint32_t *bytes,
     retval = 1;
 error:
     if (bytes_str != NULL) {
-        pcre_free_substring(bytes_str);
+        pcre2_free_substring(bytes_str);
     }
     if (offset_str != NULL) {
-        pcre_free_substring(offset_str);
+        pcre2_free_substring(offset_str);
     }
     if (relative_str != NULL) {
-        pcre_free_substring(relative_str);
+        pcre2_free_substring(relative_str);
     }
     return retval;
 }

@@ -190,7 +190,7 @@ static DetectSshSoftwareVersionData *DetectSshSoftwareVersionParse (DetectEngine
         if (ssh->software_ver == NULL) {
             goto error;
         }
-        pcre_free_substring(str_ptr);
+        pcre2_free_substring(str_ptr);
 
         ssh->len = strlen((char *)ssh->software_ver);
 

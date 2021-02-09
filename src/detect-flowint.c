@@ -333,18 +333,18 @@ static DetectFlowintData *DetectFlowintParse(DetectEngineCtx *de_ctx, const char
     SCLogDebug("sfd->name %s id %u", sfd->name, sfd->idx);
     sfd->modifier = modifier;
 
-    pcre_free_substring(varname);
-    pcre_free_substring(modstr);
+    pcre2_free_substring(varname);
+    pcre2_free_substring(modstr);
     if (varval)
-        pcre_free_substring(varval);
+        pcre2_free_substring(varval);
     return sfd;
 error:
     if (varname)
-        pcre_free_substring(varname);
+        pcre2_free_substring(varname);
     if (varval)
-        pcre_free_substring(varval);
+        pcre2_free_substring(varval);
     if (modstr)
-        pcre_free_substring(modstr);
+        pcre2_free_substring(modstr);
     if (sfd != NULL)
         SCFree(sfd);
     return NULL;

@@ -340,13 +340,13 @@ int DetectIPRepSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
     cd->val = val;
     SCLogDebug("cmd %u, cat %u, op %u, val %u", cd->cmd, cd->cat, cd->op, cd->val);
 
-    pcre_free_substring(name);
+    pcre2_free_substring(name);
     name = NULL;
-    pcre_free_substring(cmd_str);
+    pcre2_free_substring(cmd_str);
     cmd_str = NULL;
-    pcre_free_substring(op_str);
+    pcre2_free_substring(op_str);
     op_str = NULL;
-    pcre_free_substring(value);
+    pcre2_free_substring(value);
     value = NULL;
 
     /* Okay so far so good, lets get this into a SigMatch
@@ -364,13 +364,13 @@ int DetectIPRepSetup (DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 
 error:
     if (name != NULL)
-        pcre_free_substring(name);
+        pcre2_free_substring(name);
     if (cmd_str != NULL)
-        pcre_free_substring(cmd_str);
+        pcre2_free_substring(cmd_str);
     if (op_str != NULL)
-        pcre_free_substring(op_str);
+        pcre2_free_substring(op_str);
     if (value != NULL)
-        pcre_free_substring(value);
+        pcre2_free_substring(value);
     if (cd != NULL)
         SCFree(cd);
     if (sm != NULL)

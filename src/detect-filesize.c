@@ -240,12 +240,12 @@ static DetectFilesizeData *DetectFilesizeParse (const char *str)
         }
     }
 
-    pcre_free_substring(arg1);
-    pcre_free_substring(arg2);
+    pcre2_free_substring(arg1);
+    pcre2_free_substring(arg2);
     if (arg3 != NULL)
-        pcre_free_substring(arg3);
+        pcre2_free_substring(arg3);
     if (arg4 != NULL)
-        pcre_free_substring(arg4);
+        pcre2_free_substring(arg4);
     return fsd;
 
 error:
