@@ -203,7 +203,7 @@ jobs:
                 lz4-devel \
                 make \
                 nss-devel \
-                pcre-devel \
+                pcre2-devel \
                 pkgconfig \
                 python3-devel \
                 python3-sphinx \
@@ -278,7 +278,7 @@ jobs:
                 lz4-devel \
                 make \
                 nss-devel \
-                pcre-devel \
+                pcre2-devel \
                 pkgconfig \
                 rust \
                 sudo \
@@ -346,7 +346,7 @@ jobs:
                 lz4-devel \
                 make \
                 nss-softokn-devel \
-                pcre-devel \
+                pcre2-devel \
                 pkgconfig \
                 python3-yaml \
                 sudo \
@@ -419,7 +419,7 @@ jobs:
                 lz4-devel \
                 make \
                 nss-softokn-devel \
-                pcre-devel \
+                pcre2-devel \
                 pkgconfig \
                 python3-yaml \
                 sudo \
@@ -490,7 +490,7 @@ jobs:
                 lz4-devel \
                 make \
                 nss-softokn-devel \
-                pcre-devel \
+                pcre2-devel \
                 pkgconfig \
                 python3-yaml \
                 sudo \
@@ -1262,7 +1262,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: git mingw-w64-x86_64-toolchain automake1.16 automake-wrapper autoconf libtool libyaml-devel pcre-devel jansson-devel make mingw-w64-x86_64-libyaml mingw-w64-x86_64-pcre mingw-w64-x86_64-rust mingw-w64-x86_64-jansson unzip p7zip python-setuptools mingw-w64-x86_64-python-yaml mingw-w64-x86_64-jq
+          install: git mingw-w64-x86_64-toolchain automake1.16 automake-wrapper autoconf libtool libyaml-devel pcre2-devel jansson-devel make mingw-w64-x86_64-libyaml mingw-w64-x86_64-pcre mingw-w64-x86_64-rust mingw-w64-x86_64-jansson unzip p7zip python-setuptools mingw-w64-x86_64-python-yaml mingw-w64-x86_64-jq
       # hack: install our own cbindgen system wide as we can't get the
       # preinstalled one to be picked up by configure
       - name: cbindgen
