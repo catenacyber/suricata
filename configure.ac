@@ -627,7 +627,7 @@
         echo
         echo "   ERROR!  pcre library not found, go get it"
         echo "   from www.pcre.org. Or from packages:"
-        echo "   Debian/Ubuntu: apt install libpcre3-dev"
+        echo "   Debian/Ubuntu: apt install libpcre2-dev"
         echo "   Fedora: dnf install pcre-devel"
         echo "   CentOS/RHEL: yum install pcre-devel"
         echo

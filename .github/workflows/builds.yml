@@ -527,8 +527,8 @@ jobs:
         run: |
           apt update
           apt -y install \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 build-essential \
                 autoconf \
                 automake \
@@ -603,8 +603,8 @@ jobs:
         run: |
           apt update
           apt -y install \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 build-essential \
                 autoconf \
                 automake \
@@ -700,8 +700,8 @@ jobs:
                 libevent-pthreads-2.1-7 \
                 libjansson-dev \
                 libpython2.7 \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 make \
                 parallel \
                 python3-yaml \
@@ -762,8 +762,8 @@ jobs:
                 libevent-pthreads-2.1-7 \
                 libjansson-dev \
                 libpython2.7 \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 make \
                 python3-yaml \
                 software-properties-common \
@@ -802,8 +802,8 @@ jobs:
         run: |
           apt update
           apt -y install \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 build-essential \
                 autoconf \
                 automake \
@@ -874,8 +874,8 @@ jobs:
         run: |
           apt update
           apt -y install \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 build-essential \
                 autoconf \
                 automake \
@@ -971,8 +971,8 @@ jobs:
           apt -y install \
                 afl \
                 afl-clang \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 build-essential \
                 autoconf \
                 automake \
@@ -1040,8 +1040,8 @@ jobs:
                 libnetfilter-queue1 \
                 libnfnetlink-dev \
                 libnfnetlink0 \
-                libpcre3 \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dev \
                 libpcap-dev \
                 libyaml-0-2 \
                 libyaml-dev \
@@ -1092,9 +1092,9 @@ jobs:
                 git \
                 gosu \
                 jq \
-                libpcre3 \
-                libpcre3-dbg \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dbg \
+                libpcre2-dev \
                 libpcap-dev   \
                 libnet1-dev \
                 libyaml-0-2 \
@@ -1155,9 +1155,9 @@ jobs:
                 git-core \
                 gosu \
                 jq \
-                libpcre3 \
-                libpcre3-dbg \
-                libpcre3-dev \
+                libpcre2 \
+                libpcre2-dbg \
+                libpcre2-dev \
                 libpcap-dev   \
                 libnet1-dev \
                 libyaml-0-2 \
