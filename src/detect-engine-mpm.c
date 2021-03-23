@@ -115,6 +115,7 @@ void DetectAppLayerMpmRegister2(const char *name,
     am->name = name;
     snprintf(am->pname, sizeof(am->pname), "%s", am->name);
     am->direction = direction;
+    DEBUG_VALIDATE_BUG_ON(sm_list > UINT16_MAX);
     am->sm_list = sm_list;
     am->sm_list_base = sm_list;
     am->priority = priority;
@@ -155,6 +156,7 @@ void DetectAppLayerMpmRegisterByParentId(DetectEngineCtx *de_ctx,
             BUG_ON(am == NULL);
             am->name = t->name;
             am->direction = t->direction;
+            DEBUG_VALIDATE_BUG_ON(id > UINT16_MAX || id < 0);
             am->sm_list = id; // use new id
             am->sm_list_base = t->sm_list;
             am->type = DETECT_BUFFER_MPM_TYPE_APP;
