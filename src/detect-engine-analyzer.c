@@ -1020,6 +1020,7 @@ void EngineAnalysisRules(const DetectEngineCtx *de_ctx,
     for (list_id = 0; list_id < (int)s->init_data->smlists_array_size; list_id++) {
         SigMatch *sm = NULL;
         for (sm = s->init_data->smlists[list_id]; sm != NULL; sm = sm->next) {
+            DEBUG_VALIDATE_BUG_ON(list_id >= sizeof(analyzer_item_map))
             int16_t item_slot = analyzer_item_map[list_id];
             if (sm->type == DETECT_PCRE) {
                 if (item_slot == -1) {
