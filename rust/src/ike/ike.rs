@@ -78,7 +78,7 @@ pub struct IkeHeaderWrapper {
     pub msg_id: u32,
     pub flags: u8,
     pub ikev1_transforms: Vec<Vec<SaAttribute>>,
-    pub ikev2_transforms: Vec<Vec<IkeV2Transform>>,
+    pub ikev2_transforms: Vec<IkeV2Transform>,
     pub ikev1_header: IkeV1Header,
     pub ikev2_header: IkeV2Header,
 }

@@ -22,7 +22,7 @@ use crate::core::STREAM_TOCLIENT;
 use crate::ike::ipsec_parser::*;
 
 use super::ipsec_parser::IkeV2Transform;
-use crate::ike::ike::{IKEState, IkeEvent};
+use crate::ike::ike::{IKEState, IKETransaction, IkeEvent};
 use crate::ike::parser::IsakmpHeader;
 use ipsec_parser::{IkeExchangeType, IkePayloadType, IkeV2Header};
 
@@ -69,9 +69,6 @@ pub struct Ikev2Container {
     /// The transforms proposed by the initiator
     pub client_transforms: Vec<Vec<IkeV2Transform>>,
 
-    /// The transforms selected by the responder
-    pub server_transforms: Vec<Vec<IkeV2Transform>>,
-
     /// The encryption algorithm selected by the responder
     pub alg_enc: IkeTransformEncType,
     /// The authentication algorithm selected by the responder
@@ -92,7 +89,6 @@ impl Default for Ikev2Container {
             connection_state: IKEV2ConnectionState::Init,
             dh_group: IkeTransformDHType::None,
             client_transforms: Vec::new(),
-            server_transforms: Vec::new(),
             alg_enc: IkeTransformEncType::ENCR_NULL,
             alg_auth: IkeTransformAuthType::NONE,
             alg_prf: IkeTransformPRFType::PRF_NULL,
@@ -128,7 +124,6 @@ pub fn handle_ikev2(
     tx.hdr.min_ver = isakmp_header.min_ver;
     tx.hdr.msg_id = isakmp_header.msg_id;
     tx.hdr.flags = isakmp_header.flags;
-    state.transactions.push(tx);
     let mut payload_types = Vec::new();
     let mut errors = 0;
     let mut notify_types = Vec::new();
@@ -140,7 +135,7 @@ pub fn handle_ikev2(
                     IkeV2PayloadContent::Dummy => (),
                     IkeV2PayloadContent::SA(ref prop) => {
                         // if hdr.flags & IKEV2_FLAG_INITIATOR != 0 {
-                        add_proposals(state, prop, direction);
+                        add_proposals(state, &mut tx, prop, direction);
                         // }
                     }
                     IkeV2PayloadContent::KE(ref kex) => {
@@ -178,32 +173,6 @@ pub fn handle_ikev2(
                         .append(&mut payload_types);
                     tx.errors = errors;
                     tx.notify_types.append(&mut notify_types);
-
-                    if direction == STREAM_TOCLIENT
-                        && state.ikev2_container.server_transforms.len() > 0
-                    {
-                        tx.hdr.ikev2_transforms.clear();
-                        for transforms in &state.ikev2_container.server_transforms {
-                            let mut proposal = Vec::new();
-                            transforms.iter().for_each(|t| match *t {
-                                IkeV2Transform::Encryption(ref e) => {
-                                    proposal.push(IkeV2Transform::Encryption(*e))
-                                }
-                                IkeV2Transform::Auth(ref e) => {
-                                    proposal.push(IkeV2Transform::Auth(*e))
-                                }
-                                IkeV2Transform::PRF(ref e) => {
-                                    proposal.push(IkeV2Transform::PRF(*e))
-                                }
-                                IkeV2Transform::DH(ref e) => proposal.push(IkeV2Transform::DH(*e)),
-                                IkeV2Transform::ESN(ref e) => {
-                                    proposal.push(IkeV2Transform::ESN(*e))
-                                }
-                                _ => (),
-                            });
-                            tx.hdr.ikev2_transforms.push(proposal);
-                        }
-                    }
                 }
             }
         }
@@ -212,10 +181,11 @@ pub fn handle_ikev2(
             ()
         }
     }
+    state.transactions.push(tx);
     return AppLayerResult::ok();
 }
 
-fn add_proposals(state: &mut IKEState, prop: &Vec<IkeV2Proposal>, direction: u8) {
+fn add_proposals(state: &mut IKEState, tx: &mut IKETransaction, prop: &Vec<IkeV2Proposal>, direction: u8) {
     for ref p in prop {
         let transforms: Vec<IkeV2Transform> = p.transforms.iter().map(|x| x.into()).collect();
         // Rule 1: warn on weak or unknown transforms
@@ -323,15 +293,29 @@ fn add_proposals(state: &mut IKEState, prop: &Vec<IkeV2Proposal>, direction: u8)
         // Finally
         if direction == STREAM_TOCLIENT {
             transforms.iter().for_each(|t| match *t {
-                IkeV2Transform::Encryption(ref e) => state.ikev2_container.alg_enc = *e,
-                IkeV2Transform::Auth(ref a) => state.ikev2_container.alg_auth = *a,
-                IkeV2Transform::PRF(ref p) => state.ikev2_container.alg_prf = *p,
-                IkeV2Transform::DH(ref dh) => state.ikev2_container.alg_dh = *dh,
-                IkeV2Transform::ESN(ref e) => state.ikev2_container.alg_esn = *e,
+                IkeV2Transform::Encryption(ref e) => {
+                    state.ikev2_container.alg_enc = *e;
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::Encryption(*e));
+                }
+                IkeV2Transform::Auth(ref a) => {
+                    state.ikev2_container.alg_auth = *a;
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::Auth(*a))
+                }
+                IkeV2Transform::PRF(ref p) => {
+                    state.ikev2_container.alg_prf = *p;
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::PRF(*p))
+                }
+                IkeV2Transform::DH(ref dh) => {
+                    state.ikev2_container.alg_dh = *dh;
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::DH(*dh));
+                }
+                IkeV2Transform::ESN(ref e) => {
+                    state.ikev2_container.alg_esn = *e;
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::ESN(*e));
+                }
                 _ => (),
             });
             SCLogDebug!("Selected transforms: {:?}", transforms);
-            state.ikev2_container.server_transforms.push(transforms);
         } else {
             SCLogDebug!("Proposed transforms: {:?}", transforms);
             state.ikev2_container.client_transforms.push(transforms);
