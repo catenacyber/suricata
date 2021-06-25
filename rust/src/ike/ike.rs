@@ -157,6 +157,12 @@ impl IKETransaction {
             core::sc_detect_engine_state_free(state);
         }
     }
+
+    /// Set an event.
+    pub fn set_event(&mut self, event: IkeEvent) {
+        let ev = event as u8;
+        core::sc_app_layer_decoder_events_set_event_raw(&mut self.events, ev);
+    }
 }
 
 impl Drop for IKETransaction {
