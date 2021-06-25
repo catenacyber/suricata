@@ -166,14 +166,11 @@ pub fn handle_ikev2(
                 }
                 state.ikev2_container.connection_state =
                     state.ikev2_container.connection_state.advance(payload);
-                if let Some(tx) = state.transactions.last_mut() {
-                    // borrow back tx to update it
-                    tx.payload_types
-                        .ikev2_payload_types
-                        .append(&mut payload_types);
-                    tx.errors = errors;
-                    tx.notify_types.append(&mut notify_types);
-                }
+                tx.payload_types
+                    .ikev2_payload_types
+                    .append(&mut payload_types);
+                tx.errors = errors;
+                tx.notify_types.append(&mut notify_types);
             }
         }
         _e => {
