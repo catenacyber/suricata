@@ -296,11 +296,11 @@ fn add_proposals(state: &mut IKEState, tx: &mut IKETransaction, prop: &Vec<IkeV2
                 }
                 IkeV2Transform::Auth(ref a) => {
                     state.ikev2_container.alg_auth = *a;
-                    tx.hdr.ikev2_transforms.push(IkeV2Transform::Auth(*a))
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::Auth(*a));
                 }
                 IkeV2Transform::PRF(ref p) => {
                     state.ikev2_container.alg_prf = *p;
-                    tx.hdr.ikev2_transforms.push(IkeV2Transform::PRF(*p))
+                    tx.hdr.ikev2_transforms.push(IkeV2Transform::PRF(*p));
                 }
                 IkeV2Transform::DH(ref dh) => {
                     state.ikev2_container.alg_dh = *dh;
