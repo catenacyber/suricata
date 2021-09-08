@@ -399,6 +399,10 @@ void EngineDone(void)
     suricata_ctl_flags |= SURICATA_DONE;
 }
 
+static void ThisIsUnused() {
+    printf("Who called me ?");
+}
+
 static int SetBpfString(int argc, char *argv[])
 {
     char *bpf_filter = NULL;
