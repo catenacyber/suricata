@@ -3,8 +3,14 @@ export CARGO_BUILD_TARGET="x86_64-unknown-linux-gnu"
 # cf https://github.com/google/sanitizers/issues/1389
 export MSAN_OPTIONS=strict_memcmp=false
 
+rm /lib/x86_64-linux-gnu/libjansson.so*
+rm /lib/x86_64-linux-gnu/libpcap.so*
+rm /lib/x86_64-linux-gnu/libyaml.so*
+rm /lib/x86_64-linux-gnu/libmagic.so*
+rm /lib/x86_64-linux-gnu/libpcre2*.so*
+
 #we did not put libhtp there before so that cifuzz does not remove it
-mv $SRC/libhtp ./
+#mv $SRC/libhtp ./
 # build project
 sh autogen.sh
 #run configure with right options
