@@ -1,7 +1,8 @@
 FROM gcr.io/oss-fuzz-base/base-builder-rust
 RUN apt-get update && apt-get install -y build-essential libpcap-dev   \
                     libyaml-0-2 libyaml-dev pkg-config zlib1g zlib1g-dev \
-                    make libmagic-dev libjansson libjansson-dev libpcre2-dev \
+                    make libmagic-dev libjansson libjansson-dev libpcre2-dev
+
 # autoconf automake libtool python flex bison cmake tshark
 
 RUN cargo install --force cbindgen
