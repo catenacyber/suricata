@@ -7,7 +7,7 @@ rm /lib/x86_64-linux-gnu/libjansson.so*
 rm /lib/x86_64-linux-gnu/libpcap.so*
 rm /lib/x86_64-linux-gnu/libyaml.so*
 rm /lib/x86_64-linux-gnu/libmagic.so*
-rm /lib/x86_64-linux-gnu/libpcre2*.so*
+#rm /lib/x86_64-linux-gnu/libpcre2-8.so*
 
 #we did not put libhtp there before so that cifuzz does not remove it
 #mv $SRC/libhtp ./
