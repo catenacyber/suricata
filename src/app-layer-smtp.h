@@ -24,7 +24,6 @@
 #ifndef __APP_LAYER_SMTP_H__
 #define __APP_LAYER_SMTP_H__
 
-#include "util-decode-mime.h"
 #include "util-streaming-buffer.h"
 #include "rust.h"
 
@@ -73,12 +72,8 @@ typedef struct SMTPTransaction_ {
     AppLayerTxData tx_data;
 
     int done;
-    /** the first message contained in the session */
-    MimeDecEntity *msg_head;
-    /** the last message contained in the session */
-    MimeDecEntity *msg_tail;
     /** the mime decoding parser state */
-    MimeDecParseState *mime_state;
+    MimeStateSMTP *mime_state;
 
     /* MAIL FROM parameters */
     uint8_t *mail_from;
@@ -90,6 +85,23 @@ typedef struct SMTPTransaction_ {
 
     TAILQ_ENTRY(SMTPTransaction_) next;
 } SMTPTransaction;
+
+// TODOrust2 config
+/**
+ * \brief Structure for containing configuration options
+ *
+ */
+typedef struct MimeDecConfig {
+    bool decode_base64;             /**< Decode base64 bodies */
+    bool decode_quoted_printable;   /**< Decode quoted-printable bodies */
+    bool extract_urls;              /**< Extract and store URLs in data structure */
+    ConfNode *extract_urls_schemes; /**< List of schemes of which to
+                                         extract urls  */
+    bool log_url_scheme;            /**< Log the scheme of extracted URLs */
+    bool body_md5;                  /**< Compute md5 sum of body */
+    uint32_t header_value_depth;    /**< Depth of which to store header values
+                                         (Default is 2000) */
+} MimeDecConfig;
 
 typedef struct SMTPConfig {
 
@@ -148,7 +160,6 @@ typedef struct SMTPState_ {
 /* Create SMTP config structure */
 extern SMTPConfig smtp_config;
 
-int SMTPProcessDataChunk(const uint8_t *chunk, uint32_t len, MimeDecParseState *state);
 void *SMTPStateAlloc(void *orig_state, AppProto proto_orig);
 void RegisterSMTPParsers(void);
 void SMTPParserCleanup(void);
