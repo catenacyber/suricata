@@ -362,7 +362,7 @@ static void SMTPConfigure(void) {
     }
 
     /* Pass mime config data to MimeDec API */
-    MimeDecSetConfig(&smtp_config.mime_config);
+    // TODOrust MimeDecSetConfig(&smtp_config.mime_config);
 
     smtp_config.content_limit = FILEDATA_CONTENT_LIMIT;
     smtp_config.content_inspect_window = FILEDATA_CONTENT_INSPECT_WINDOW;
@@ -439,7 +439,6 @@ static SMTPTransaction *SMTPTransactionCreate(void)
     }
 
     TAILQ_INIT(&tx->rcpt_to_list);
-    tx->mime_state = NULL;
     return tx;
 }
 
@@ -477,8 +476,8 @@ static void SMTPNewFile(SMTPTransaction *tx, File *file)
             smtp_config.content_inspect_min_size);
 }
 
-int SMTPProcessDataChunk(const uint8_t *chunk, uint32_t len,
-        MimeDecParseState *state)
+// TODOrust
+static int SMTPProcessDataChunk(const uint8_t *chunk, uint32_t len, MimeDecParseState *state)
 {
     SCEnter();
     int ret = MIME_DEC_OK;
@@ -745,6 +744,7 @@ static int SMTPProcessCommandBDAT(
     SCReturnInt(0);
 }
 
+// TODOrust
 static void SetMimeEvents(SMTPState *state)
 {
     if (state->curr_tx->mime_state->msg == NULL) {
@@ -816,6 +816,7 @@ static int SMTPProcessCommandDATA(
         } else if (smtp_config.decode_mime &&
                 state->curr_tx->mime_state != NULL) {
             /* Complete parsing task */
+            // TODOrust
             int ret = MimeDecParseComplete(state->curr_tx->mime_state);
             if (ret != MIME_DEC_OK) {
                 SMTPSetEvent(state, SMTP_DECODER_EVENT_MIME_PARSE_FAILED);
@@ -838,6 +839,7 @@ static int SMTPProcessCommandDATA(
             (state->parser_state & SMTP_PARSER_STATE_COMMAND_DATA_MODE)) {
 
         if (smtp_config.decode_mime && state->curr_tx->mime_state != NULL) {
+            // TODOrust
             int ret = MimeDecParseLine(
                     line->buf, line->len, line->delim_len, state->curr_tx->mime_state);
             if (ret != MIME_DEC_OK) {
@@ -1185,7 +1187,9 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                 if (tx->mime_state) {
                     /* We have 2 chained mails and did not detect the end
                      * of first one. So we start a new transaction. */
-                    tx->mime_state->state_flag = PARSE_ERROR;
+                    // TODOrust2 check later : may need to add a condition about
+                    // tx->mime_state->state_flag < end
+                    tx->mime_state->state_flag = MimeSmtpParserError;
                     SMTPSetEvent(state, SMTP_DECODER_EVENT_UNPARSABLE_CONTENT);
                     tx = SMTPTransactionCreate();
                     if (tx == NULL)
@@ -1194,21 +1198,11 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                     TAILQ_INSERT_TAIL(&state->tx_list, tx, next);
                     tx->tx_id = state->tx_cnt++;
                 }
-                tx->mime_state = MimeDecInitParser(f, SMTPProcessDataChunk);
+                tx->mime_state = rs_mime_smtp_state_init();
                 if (tx->mime_state == NULL) {
                     SCLogError(SC_ERR_MEM_ALLOC, "MimeDecInitParser() failed to "
                             "allocate data");
                     return MIME_DEC_ERR_MEM;
-                }
-
-                /* Add new MIME message to end of list */
-                if (tx->msg_head == NULL) {
-                    tx->msg_head = tx->mime_state->msg;
-                    tx->msg_tail = tx->mime_state->msg;
-                }
-                else {
-                    tx->msg_tail->next = tx->mime_state->msg;
-                    tx->msg_tail = tx->mime_state->msg;
                 }
             }
             /* Enter immediately data mode without waiting for server reply */
@@ -1282,8 +1276,9 @@ static int SMTPPreProcessCommands(
     DEBUG_VALIDATE_BUG_ON((state->parser_state & SMTP_PARSER_STATE_COMMAND_DATA_MODE) == 0);
 
     /* fall back to strict line parsing for mime header parsing */
+    // TODOrust2 use consumed API
     if (state->curr_tx && state->curr_tx->mime_state &&
-            state->curr_tx->mime_state->state_flag < HEADER_DONE)
+            state->curr_tx->mime_state->state_flag < MimeSmtpBody)
         return 1;
 
     bool line_complete = false;
@@ -1515,10 +1510,8 @@ static void SMTPLocalStorageFree(void *ptr)
 static void SMTPTransactionFree(SMTPTransaction *tx, SMTPState *state)
 {
     if (tx->mime_state != NULL) {
-        MimeDecDeInitParser(tx->mime_state);
+        rs_mime_smtp_state_free(tx->mime_state);
     }
-    /* Free list of MIME message recursively */
-    MimeDecFreeEntity(tx->msg_head);
 
     if (tx->tx_data.events != NULL)
         AppLayerDecoderEventsFreeEvents(&tx->tx_data.events);
@@ -4011,7 +4004,6 @@ static int SMTPParserTest14(void)
 
     if (smtp_state->cmds_cnt != 0 || smtp_state->cmds_idx != 0 ||
             smtp_state->curr_tx->mime_state == NULL ||
-            smtp_state->curr_tx->msg_head == NULL || /* MIME data structures */
             smtp_state->parser_state !=
                     (SMTP_PARSER_STATE_FIRST_REPLY_SEEN | SMTP_PARSER_STATE_COMMAND_DATA_MODE)) {
         printf("smtp parser in inconsistent state l.%d\n", __LINE__);
@@ -4029,7 +4021,6 @@ static int SMTPParserTest14(void)
     if (smtp_state->cmds_cnt != 1 || smtp_state->cmds_idx != 0 ||
             smtp_state->cmds[0] != SMTP_COMMAND_DATA_MODE ||
             smtp_state->curr_tx->mime_state == NULL ||
-            smtp_state->curr_tx->msg_head == NULL || /* MIME data structures */
             smtp_state->parser_state != (SMTP_PARSER_STATE_FIRST_REPLY_SEEN)) {
         printf("smtp parser in inconsistent state l.%d\n", __LINE__);
         goto end;
