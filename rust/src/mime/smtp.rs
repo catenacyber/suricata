@@ -102,3 +102,53 @@ pub unsafe extern "C" fn rs_smtp_mime_complete(
     *warnings = w;
     return r;
 }
+
+//TODOrust3 move to log.rs ?
+use crate::jsonbuilder::{JsonBuilder, JsonError};
+
+fn log_subject_md5(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), JsonError> {
+    js.set_string("subject_md5", "TODO")?;
+    return Ok(());
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_subject_md5(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_body_md5(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_field_array(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_field_comma(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_field_string(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_log_data(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
+) -> bool {
+    return log_subject_md5(js, ctx).is_ok();
+}
