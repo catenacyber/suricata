@@ -31,6 +31,7 @@ impl Default for MimeSmtpParserState {
 }
 
 #[derive(Debug, Default)]
+#[repr(C)]
 pub struct MimeStateSMTP {
     pub state_flag: MimeSmtpParserState,
 }
@@ -53,4 +54,51 @@ pub unsafe extern "C" fn rs_mime_smtp_state_init() -> *mut MimeStateSMTP {
 pub unsafe extern "C" fn rs_mime_smtp_state_free(ctx: &mut MimeStateSMTP) {
     // Just unbox...
     std::mem::drop(Box::from_raw(ctx));
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, PartialOrd, PartialEq)]
+pub enum MimeSmtpParserResult {
+    MimeSmtpNeedsMore = 0,
+    MimeSmtpFileOpen = 1,
+    MimeSmtpFileClose = 2,
+    MimeSmtpFileChunk = 3,
+}
+
+// Cannot use BIT_U32 macros as they do not get exported by cbindgen :-/
+pub const MIME_ANOM_INVALID_BASE64: u32 = 0x1;
+pub const MIME_ANOM_INVALID_QP: u32 = 0x2;
+pub const MIME_ANOM_LONG_LINE: u32 = 0x4;
+pub const MIME_ANOM_LONG_ENC_LINE: u32 = 0x8;
+pub const MIME_ANOM_LONG_HEADER_NAME: u32 = 0x10;
+pub const MIME_ANOM_LONG_HEADER_VALUE: u32 = 0x20;
+pub const MIME_ANOM_MALFORMED_MSG: u32 = 0x40;
+pub const MIME_ANOM_LONG_BOUNDARY: u32 = 0x80;
+pub const MIME_ANOM_LONG_FILENAME: u32 = 0x100;
+
+fn mime_smpt_parse_line(ctx: &mut MimeStateSMTP, i: &[u8]) -> (MimeSmtpParserResult, u32) {
+    return (MimeSmtpParserResult::MimeSmtpNeedsMore, 0);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_smtp_mime_parse_line(
+    input: *const u8, input_len: u32, delim_len: u8, warnings: *mut u32, ctx: &mut MimeStateSMTP,
+) -> MimeSmtpParserResult {
+    let slice = build_slice!(input, input_len as usize);
+    let (r, w) = mime_smpt_parse_line(ctx, slice);
+    *warnings = w;
+    return r;
+}
+
+fn mime_smtp_complete(ctx: &mut MimeStateSMTP) -> (MimeSmtpParserResult, u32) {
+    return (MimeSmtpParserResult::MimeSmtpFileClose, 0);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_smtp_mime_complete(
+    ctx: &mut MimeStateSMTP, warnings: *mut u32,
+) -> MimeSmtpParserResult {
+    let (r, w) = mime_smtp_complete(ctx);
+    *warnings = w;
+    return r;
 }
