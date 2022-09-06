@@ -152,3 +152,5 @@ pub unsafe extern "C" fn rs_mime_smtp_log_data(
 ) -> bool {
     return log_subject_md5(js, ctx).is_ok();
 }
+
+//TODOrust2 = lua

@@ -84,7 +84,7 @@ typedef struct SMTPTransaction_ {
     TAILQ_ENTRY(SMTPTransaction_) next;
 } SMTPTransaction;
 
-// TODOrust
+// TODOrust2 config
 /**
  * \brief Structure for containing configuration options
  *
