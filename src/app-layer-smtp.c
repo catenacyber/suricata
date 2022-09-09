@@ -693,13 +693,6 @@ static int SMTPProcessCommandDATA(
             SetMimeEvents(state, events);
             switch (ret) {
                 case MimeSmtpFileOpen:
-                    if (state->files_ts == NULL) {
-                        state->files_ts = FileContainerAlloc();
-                        if (state->files_ts == NULL) {
-                            SCLogError(SC_ERR_MEM_ALLOC, "Could not create file container");
-                            SCReturnInt(-1);
-                        }
-                    }
                     // get filename owned by mime state
                     rs_mime_smtp_get_filename(state->curr_tx->mime_state, &filename, &filename_len);
 
@@ -730,7 +723,7 @@ static int SMTPProcessCommandDATA(
                     SMTPNewFile(state->curr_tx, state->files_ts->tail);
                     break;
                 case MimeSmtpFileChunk:
-                    // TODOrust1 in rust FileAppendData(state->files_ts, (uint8_t *) chunk, len);
+                    // rust already run FileAppendData
                     if (state->files_ts->tail && state->files_ts->tail->content_inspected == 0 &&
                             state->files_ts->tail->size >= smtp_config.content_inspect_min_size) {
                         depth = smtp_config.content_inspect_min_size +
@@ -1113,7 +1106,14 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                     TAILQ_INSERT_TAIL(&state->tx_list, tx, next);
                     tx->tx_id = state->tx_cnt++;
                 }
-                tx->mime_state = rs_mime_smtp_state_init();
+                if (state->files_ts == NULL) {
+                    state->files_ts = FileContainerAlloc();
+                    if (state->files_ts == NULL) {
+                        SCLogError(SC_ERR_MEM_ALLOC, "Could not create file container");
+                        return -1;
+                    }
+                }
+                tx->mime_state = rs_mime_smtp_state_init(state->files_ts);
                 if (tx->mime_state == NULL) {
                     SCLogError(SC_ERR_MEM_ALLOC, "MimeDecInitParser() failed to "
                             "allocate data");

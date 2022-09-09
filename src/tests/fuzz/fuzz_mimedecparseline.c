@@ -26,7 +26,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     }
 
     uint32_t events;
-    MimeStateSMTP *state = rs_mime_smtp_state_init();
+    FileContainer *files = FileContainerAlloc();
+    MimeStateSMTP *state = rs_mime_smtp_state_init(files);
     const uint8_t * buffer = data;
     while (1) {
         uint8_t * next = memchr(buffer, '\n', size);
@@ -47,6 +48,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     (void)rs_smtp_mime_complete(state, &events);
     /* De Init parser */
     rs_mime_smtp_state_free(state);
+    FileContainerFree(files);
 
     return 0;
 }
