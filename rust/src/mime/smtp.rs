@@ -44,6 +44,7 @@ pub struct MimeHeader {
 pub struct MimeStateSMTP<'a> {
     pub state_flag: MimeSmtpParserState,
     headers: Vec<MimeHeader>,
+    main_headers_nb: usize,
     filename: Vec<u8>,
     boundary: Vec<u8>,
     quoted_buffer: Vec<u8>,
@@ -55,6 +56,7 @@ pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> 
     let r = MimeStateSMTP {
         state_flag: MimeSmtpParserState::MimeSmtpStart,
         headers: Vec::new(),
+        main_headers_nb: 0,
         filename: Vec::new(),
         boundary: Vec::new(),
         quoted_buffer: Vec::new(),
@@ -115,7 +117,7 @@ pub const MIME_ANOM_LONG_FILENAME: u32 = 0x100;
 
 fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
     let mut sections_values = Vec::new();
-    for h in &ctx.headers {
+    for h in &ctx.headers[ctx.main_headers_nb..] {
         if mime::rs_equals_lowercase(&h.name, b"content-disposition") {
             if ctx.filename.len() == 0 {
                 if let Ok(value) =
@@ -133,7 +135,7 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
             }
         }
     }
-    for h in &ctx.headers {
+    for h in &ctx.headers[ctx.main_headers_nb..] {
         if mime::rs_equals_lowercase(&h.name, b"content-type") {
             if ctx.filename.len() == 0 {
                 if let Ok(value) =
@@ -143,11 +145,13 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
                     sections_values.clear();
                 }
             }
-            if let Ok(value) =
-                mime::mime_find_header_token(&h.value, b"boundary", &mut sections_values)
-            {
-                ctx.boundary.extend_from_slice(value);
-                sections_values.clear();
+            if ctx.main_headers_nb == 0 {
+                if let Ok(value) =
+                    mime::mime_find_header_token(&h.value, b"boundary", &mut sections_values)
+                {
+                    ctx.boundary.extend_from_slice(value);
+                    sections_values.clear();
+                }
             }
             break;
         }
@@ -179,6 +183,9 @@ fn mime_smtp_parse_line(
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
                 mime_smtp_process_headers(ctx);
+                if ctx.main_headers_nb == 0 {
+                    ctx.main_headers_nb = ctx.headers.len();
+                }
                 return (MimeSmtpParserResult::MimeSmtpFileOpen, 0);
             } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpHeader;
@@ -192,6 +199,9 @@ fn mime_smtp_parse_line(
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
                 mime_smtp_process_headers(ctx);
+                if ctx.main_headers_nb == 0 {
+                    ctx.main_headers_nb = ctx.headers.len();
+                }
                 return (MimeSmtpParserResult::MimeSmtpFileOpen, 0);
             } else if i[0] == b' ' || i[0] == b'\t' {
                 let last = ctx.headers.len() - 1;
@@ -209,7 +219,7 @@ fn mime_smtp_parse_line(
                     ctx.state_flag = MimeSmtpParserState::MimeSmtpStart;
                     let toclose = ctx.filename.len() > 0;
                     ctx.filename.clear();
-                    ctx.headers.clear();
+                    ctx.headers.truncate(ctx.main_headers_nb);
                     ctx.encoding = MimeSmtpEncoding::Plain;
                     if toclose {
                         return (MimeSmtpParserResult::MimeSmtpFileClose, 0);
@@ -292,9 +302,17 @@ pub unsafe extern "C" fn rs_smtp_mime_complete(
 
 //TODOrust3 move to log.rs ?
 use crate::jsonbuilder::{JsonBuilder, JsonError};
+use digest::Digest;
+use digest::Update;
+use md5::Md5;
 
 fn log_subject_md5(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), JsonError> {
-    js.set_string("subject_md5", "TODO")?;
+    for h in &ctx.headers[..ctx.main_headers_nb] {
+        if mime::rs_equals_lowercase(&h.name, b"subject") {
+            let hash = format!("{:x}", Md5::new().chain(&h.value).finalize());
+            js.set_string("subject_md5", &hash)?;
+        }
+    }
     return Ok(());
 }
 
@@ -309,6 +327,7 @@ pub unsafe extern "C" fn rs_mime_smtp_log_subject_md5(
 pub unsafe extern "C" fn rs_mime_smtp_log_body_md5(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
 ) -> bool {
+    //TODOrust2 get body md5
     return log_subject_md5(js, ctx).is_ok();
 }
 
