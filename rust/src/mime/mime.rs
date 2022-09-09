@@ -100,7 +100,7 @@ fn mime_parse_header_tokens(input: &[u8]) -> IResult<&[u8], MIMEHeaderTokens> {
     return Ok((input, MIMEHeaderTokens { tokens }));
 }
 
-fn mime_find_header_token<'a>(
+pub fn mime_find_header_token<'a>(
     header: &'a [u8], token: &[u8], sections_values: &'a mut Vec<u8>,
 ) -> Result<&'a [u8], ()> {
     match mime_parse_header_tokens(header) {
@@ -260,7 +260,7 @@ pub fn mime_parse_header_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // s2 is already lower case
-fn rs_equals_lowercase(s1: &[u8], s2: &[u8]) -> bool {
+pub fn rs_equals_lowercase(s1: &[u8], s2: &[u8]) -> bool {
     if s1.len() == s2.len() {
         for i in 0..s1.len() {
             if s1[i].to_ascii_lowercase() != s2[i] {

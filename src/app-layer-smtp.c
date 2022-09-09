@@ -681,9 +681,55 @@ static int SMTPProcessCommandDATA(
 
         if (smtp_config.decode_mime && state->curr_tx->mime_state != NULL) {
             uint32_t events;
+            uint16_t flags = FileFlowToFlags(f, STREAM_TOSERVER);
+            const uint8_t *filename = NULL;
+            uint16_t filename_len = 0;
+
+            /* we depend on detection engine for file pruning */
+            flags |= FILE_USE_DETECT;
             MimeSmtpParserResult ret = rs_smtp_mime_parse_line(
                     line->buf, line->len, line->delim_len, &events, state->curr_tx->mime_state);
             SetMimeEvents(state, events);
+            switch (ret) {
+                case MimeSmtpFileOpen:
+                    if (state->files_ts == NULL) {
+                        state->files_ts = FileContainerAlloc();
+                        if (state->files_ts == NULL) {
+                            SCLogError(SC_ERR_MEM_ALLOC, "Could not create file container");
+                            SCReturnInt(-1);
+                        }
+                    }
+                    // get filename owned by mime state
+                    rs_mime_smtp_get_filename(state->curr_tx->mime_state, &filename, &filename_len);
+
+                    if (filename_len == 0) {
+                        // not an attachment
+                        break;
+                    }
+                    /* Set storage flag if applicable since only the first file in the
+                     * flow seems to be processed by the 'filestore' detector */
+                    if (state->files_ts->head->flags & FILE_STORE) {
+                        flags |= FILE_STORE;
+                    }
+                    uint32_t depth = smtp_config.content_inspect_min_size +
+                                     (state->toserver_data_count - state->toserver_last_data_stamp);
+                    SCLogDebug("StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %" PRIu32,
+                            depth);
+                    StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, depth);
+
+                    if (filename_len > SC_FILENAME_MAX) {
+                        filename_len = SC_FILENAME_MAX;
+                        SMTPSetEvent(state, SMTP_DECODER_EVENT_MIME_LONG_FILENAME);
+                    }
+                    if (FileOpenFileWithId(state->files_ts, &smtp_config.sbcfg,
+                                state->file_track_id++, filename, filename_len, NULL, 0,
+                                flags) != 0) {
+                        SCLogDebug("FileOpenFile() failed");
+                    }
+                    SMTPNewFile(state->curr_tx, state->files_ts->tail);
+                    break;
+                    // case MimeFileChunk:
+            }
             // TODOrust1 act on file open and stuff...
         }
     }

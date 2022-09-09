@@ -41,7 +41,8 @@ pub struct MimeHeader {
 #[derive(Debug, Default)]
 pub struct MimeStateSMTP {
     pub state_flag: MimeSmtpParserState,
-    pub headers : Vec<MimeHeader>,
+    headers: Vec<MimeHeader>,
+    filename: Vec<u8>,
 }
 
 pub fn mime_smtp_state_init() -> Option<MimeStateSMTP> {
@@ -84,11 +85,40 @@ pub const MIME_ANOM_MALFORMED_MSG: u32 = 0x40;
 pub const MIME_ANOM_LONG_BOUNDARY: u32 = 0x80;
 pub const MIME_ANOM_LONG_FILENAME: u32 = 0x100;
 
-fn mime_smpt_parse_line(ctx: &mut MimeStateSMTP, delim_len: u8, i: &[u8]) -> (MimeSmtpParserResult, u32) {
+fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
+    let mut sections_values = Vec::new();
+    for h in &ctx.headers {
+        if mime::rs_equals_lowercase(&h.name, b"content-disposition") {
+            if let Ok(value) =
+                mime::mime_find_header_token(&h.value, b"filename", &mut sections_values)
+            {
+                ctx.filename.extend_from_slice(value);
+                break;
+            }
+        }
+    }
+    if ctx.filename.len() == 0 {
+        for h in &ctx.headers {
+            if mime::rs_equals_lowercase(&h.name, b"content-type") {
+                if let Ok(value) =
+                    mime::mime_find_header_token(&h.value, b"name", &mut sections_values)
+                {
+                    ctx.filename.extend_from_slice(value);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+fn mime_smtp_parse_line(
+    ctx: &mut MimeStateSMTP, delim_len: u8, i: &[u8],
+) -> (MimeSmtpParserResult, u32) {
     match ctx.state_flag {
         MimeSmtpParserState::MimeSmtpStart => {
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
+                mime_smtp_process_headers(ctx);
             } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpHeader;
                 let mut h = MimeHeader::default();
@@ -100,6 +130,7 @@ fn mime_smpt_parse_line(ctx: &mut MimeStateSMTP, delim_len: u8, i: &[u8]) -> (Mi
         MimeSmtpParserState::MimeSmtpHeader => {
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
+                mime_smtp_process_headers(ctx);
             } else if i[0] == b' ' {
                 let last = ctx.headers.len() - 1;
                 ctx.headers[last].value.extend_from_slice(&i[1..]);
@@ -110,8 +141,7 @@ fn mime_smpt_parse_line(ctx: &mut MimeStateSMTP, delim_len: u8, i: &[u8]) -> (Mi
                 ctx.headers.push(h);
             }
         }
-        MimeSmtpParserState::MimeSmtpBody => {
-        }
+        MimeSmtpParserState::MimeSmtpBody => {}
         _ => {}
     }
     return (MimeSmtpParserResult::MimeSmtpNeedsMore, 0);
@@ -122,7 +152,7 @@ pub unsafe extern "C" fn rs_smtp_mime_parse_line(
     input: *const u8, input_len: u32, delim_len: u8, warnings: *mut u32, ctx: &mut MimeStateSMTP,
 ) -> MimeSmtpParserResult {
     let slice = build_slice!(input, input_len as usize);
-    let (r, w) = mime_smpt_parse_line(ctx, delim_len, slice);
+    let (r, w) = mime_smtp_parse_line(ctx, delim_len, slice);
     *warnings = w;
     return r;
 }
@@ -198,10 +228,24 @@ pub unsafe extern "C" fn rs_mime_smtp_set_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_mime_smtp_get_state(
-    ctx: &mut MimeStateSMTP,
-) -> MimeSmtpParserState {
+pub unsafe extern "C" fn rs_mime_smtp_get_state(ctx: &mut MimeStateSMTP) -> MimeSmtpParserState {
     return ctx.state_flag;
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_get_filename(
+    ctx: &mut MimeStateSMTP, buffer: *mut *const u8, filename_len: *mut u16,
+) {
+    if ctx.filename.len() > 0 {
+        *buffer = ctx.filename.as_ptr();
+        if ctx.filename.len() < u16::MAX.into() {
+            *filename_len = ctx.filename.len() as u16;
+        } else {
+            *filename_len = u16::MAX;
+        }
+    } else {
+        *buffer = std::ptr::null_mut();
+        *filename_len = 0;
+    }
+}
 //TODOrust2 = lua
