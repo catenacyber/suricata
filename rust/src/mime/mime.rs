@@ -253,7 +253,7 @@ fn mime_consume_until_eol(input: &[u8]) -> IResult<&[u8], bool> {
     return alt((value(true, mime_parse_skip_line), value(false, rest)))(input);
 }
 
-fn mime_parse_header_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
+pub fn mime_parse_header_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let (input, name) = take_till(|ch: u8| ch == b':')(input)?;
     let (input, _) = char(':')(input)?;
     return Ok((input, name));

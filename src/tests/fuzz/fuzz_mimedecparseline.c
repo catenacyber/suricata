@@ -31,7 +31,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     while (1) {
         uint8_t * next = memchr(buffer, '\n', size);
         if (next == NULL) {
-            if (state->state_flag >= MimeSmtpBody)
+            if (rs_mime_smtp_get_state(state) >= MimeSmtpBody)
                 (void)rs_smtp_mime_parse_line(buffer, size, 0, &events, state);
             break;
         } else {

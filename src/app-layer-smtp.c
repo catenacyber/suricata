@@ -1021,7 +1021,7 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                      * of first one. So we start a new transaction. */
                     // TODOrust3 check later : may need to add a condition about
                     // tx->mime_state->state_flag < end
-                    tx->mime_state->state_flag = MimeSmtpParserError;
+                    rs_mime_smtp_set_state(tx->mime_state, MimeSmtpParserError);
                     SMTPSetEvent(state, SMTP_DECODER_EVENT_UNPARSABLE_CONTENT);
                     tx = SMTPTransactionCreate();
                     if (tx == NULL)
@@ -1110,7 +1110,7 @@ static int SMTPPreProcessCommands(
     /* fall back to strict line parsing for mime header parsing */
     // TODOrust3 use consumed API
     if (state->curr_tx && state->curr_tx->mime_state &&
-            state->curr_tx->mime_state->state_flag < MimeSmtpBody)
+            rs_mime_smtp_get_state(state->curr_tx->mime_state) < MimeSmtpBody)
         return 1;
 
     bool line_complete = false;
