@@ -43,6 +43,8 @@ pub struct MimeStateSMTP {
     pub state_flag: MimeSmtpParserState,
     headers: Vec<MimeHeader>,
     filename: Vec<u8>,
+    boundary: Vec<u8>,
+    encoding: MimeSmtpEncoding,
 }
 
 pub fn mime_smtp_state_init() -> Option<MimeStateSMTP> {
@@ -74,6 +76,20 @@ pub enum MimeSmtpParserResult {
     MimeSmtpFileChunk = 3,
 }
 
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+pub enum MimeSmtpEncoding {
+    Plain = 0,
+    Base64 = 1,
+    QuotedPrintable = 2,
+}
+
+impl Default for MimeSmtpEncoding {
+    fn default() -> Self {
+        MimeSmtpEncoding::Plain
+    }
+}
+
 // Cannot use BIT_U32 macros as they do not get exported by cbindgen :-/
 pub const MIME_ANOM_INVALID_BASE64: u32 = 0x1;
 pub const MIME_ANOM_INVALID_QP: u32 = 0x2;
@@ -89,24 +105,39 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
     let mut sections_values = Vec::new();
     for h in &ctx.headers {
         if mime::rs_equals_lowercase(&h.name, b"content-disposition") {
-            if let Ok(value) =
-                mime::mime_find_header_token(&h.value, b"filename", &mut sections_values)
-            {
-                ctx.filename.extend_from_slice(value);
-                break;
+            if ctx.filename.len() == 0 {
+                if let Ok(value) =
+                    mime::mime_find_header_token(&h.value, b"filename", &mut sections_values)
+                {
+                    ctx.filename.extend_from_slice(value);
+                    sections_values.clear();
+                }
+            }
+        } else if mime::rs_equals_lowercase(&h.name, b"content-transfer-encoding") {
+            if mime::rs_equals_lowercase(&h.value, b"base64") {
+                ctx.encoding = MimeSmtpEncoding::Base64;
+            } else if mime::rs_equals_lowercase(&h.value, b"quoted-printable") {
+                ctx.encoding = MimeSmtpEncoding::QuotedPrintable;
             }
         }
     }
-    if ctx.filename.len() == 0 {
-        for h in &ctx.headers {
-            if mime::rs_equals_lowercase(&h.name, b"content-type") {
+    for h in &ctx.headers {
+        if mime::rs_equals_lowercase(&h.name, b"content-type") {
+            if ctx.filename.len() == 0 {
                 if let Ok(value) =
                     mime::mime_find_header_token(&h.value, b"name", &mut sections_values)
                 {
                     ctx.filename.extend_from_slice(value);
-                    break;
+                    sections_values.clear();
                 }
             }
+            if let Ok(value) =
+                mime::mime_find_header_token(&h.value, b"boundary", &mut sections_values)
+            {
+                ctx.boundary.extend_from_slice(value);
+                sections_values.clear();
+            }
+            break;
         }
     }
 }
@@ -119,6 +150,7 @@ fn mime_smtp_parse_line(
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
                 mime_smtp_process_headers(ctx);
+                return (MimeSmtpParserResult::MimeSmtpFileOpen, 0);
             } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpHeader;
                 let mut h = MimeHeader::default();
@@ -131,7 +163,8 @@ fn mime_smtp_parse_line(
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
                 mime_smtp_process_headers(ctx);
-            } else if i[0] == b' ' {
+                return (MimeSmtpParserResult::MimeSmtpFileOpen, 0);
+            } else if i[0] == b' ' || i[0] == b'\t' {
                 let last = ctx.headers.len() - 1;
                 ctx.headers[last].value.extend_from_slice(&i[1..]);
             } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
@@ -141,7 +174,28 @@ fn mime_smtp_parse_line(
                 ctx.headers.push(h);
             }
         }
-        MimeSmtpParserState::MimeSmtpBody => {}
+        MimeSmtpParserState::MimeSmtpBody => {
+        if ctx.boundary.len() > 0 && i.len() >= ctx.boundary.len() {
+            if &i[..ctx.boundary.len()] == ctx.boundary {
+                ctx.state_flag = MimeSmtpParserState::MimeSmtpStart;
+                let toclose = ctx.filename.len() > 0;
+                ctx.filename.clear();
+                ctx.headers.clear();
+                ctx.encoding = MimeSmtpEncoding::Plain;
+                if toclose {
+                    return (MimeSmtpParserResult::MimeSmtpFileClose, 0);
+                }
+                return (MimeSmtpParserResult::MimeSmtpNeedsMore, 0);
+            }
+        }
+        switch ctx.encoding {
+                            MimeSmtpEncoding::Plain => {
+                            
+}
+_ => {}
+        }
+        //TODOrust1 + FileAppendData
+        }
         _ => {}
     }
     return (MimeSmtpParserResult::MimeSmtpNeedsMore, 0);
