@@ -661,7 +661,7 @@ static int SMTPProcessCommandDATA(
                 state->curr_tx->mime_state != NULL) {
             /* Complete parsing task */
             uint32_t events = 0;
-            // TODOrust2 is this needed ? what return ?
+            // TODOrust3 is this needed ? what return ?
             uint8_t ret = rs_smtp_mime_complete(state->curr_tx->mime_state, &events);
 
             /* Generate decoder events */
@@ -1095,7 +1095,7 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                 if (tx->mime_state) {
                     /* We have 2 chained mails and did not detect the end
                      * of first one. So we start a new transaction. */
-                    // TODOrust3 check later : may need to add a condition about
+                    // TODOrust4 check later : may need to add a condition about
                     // tx->mime_state->state_flag < end
                     rs_mime_smtp_set_state(tx->mime_state, MimeSmtpParserError);
                     SMTPSetEvent(state, SMTP_DECODER_EVENT_UNPARSABLE_CONTENT);
@@ -1191,7 +1191,7 @@ static int SMTPPreProcessCommands(
     DEBUG_VALIDATE_BUG_ON((state->parser_state & SMTP_PARSER_STATE_COMMAND_DATA_MODE) == 0);
 
     /* fall back to strict line parsing for mime header parsing */
-    // TODOrust3 use consumed API
+    // TODOrust4 use consumed API
     if (state->curr_tx && state->curr_tx->mime_state &&
             rs_mime_smtp_get_state(state->curr_tx->mime_state) < MimeSmtpBody)
         return 1;

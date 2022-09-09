@@ -335,6 +335,7 @@ pub unsafe extern "C" fn rs_mime_smtp_log_body_md5(
 pub unsafe extern "C" fn rs_mime_smtp_log_field_array(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
 ) -> bool {
+    //TODOrust2 check previous behavior
     return log_subject_md5(js, ctx).is_ok();
 }
 
@@ -342,6 +343,7 @@ pub unsafe extern "C" fn rs_mime_smtp_log_field_array(
 pub unsafe extern "C" fn rs_mime_smtp_log_field_comma(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
 ) -> bool {
+    //TODOrust2 check previous behavior
     return log_subject_md5(js, ctx).is_ok();
 }
 
@@ -349,6 +351,7 @@ pub unsafe extern "C" fn rs_mime_smtp_log_field_comma(
 pub unsafe extern "C" fn rs_mime_smtp_log_field_string(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
 ) -> bool {
+    //TODOrust2 check previous behavior
     return log_subject_md5(js, ctx).is_ok();
 }
 
@@ -356,6 +359,7 @@ pub unsafe extern "C" fn rs_mime_smtp_log_field_string(
 pub unsafe extern "C" fn rs_mime_smtp_log_data(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
 ) -> bool {
+    //TODOrust2 check previous behavior
     return log_subject_md5(js, ctx).is_ok();
 }
 

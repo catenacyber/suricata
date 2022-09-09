@@ -84,18 +84,6 @@ struct {
     { NULL, NULL, LOG_EMAIL_DEFAULT},
 };
 
-static inline char *SkipWhiteSpaceTill(char *p, char *savep)
-{
-    char *sp = p;
-    if (unlikely(p == NULL)) {
-        return NULL;
-    }
-    while (((*sp == '\t') || (*sp == ' ')) && (sp < savep)) {
-        sp++;
-    }
-    return sp;
-}
-
 static void EveEmailLogJSONMd5(OutputJsonEmailCtx *email_ctx, JsonBuilder *js, SMTPTransaction *tx)
 {
     if (email_ctx->flags & LOG_EMAIL_SUBJECT_MD5) {
