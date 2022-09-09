@@ -684,6 +684,7 @@ static int SMTPProcessCommandDATA(
             uint16_t flags = FileFlowToFlags(f, STREAM_TOSERVER);
             const uint8_t *filename = NULL;
             uint16_t filename_len = 0;
+            uint32_t depth;
 
             /* we depend on detection engine for file pruning */
             flags |= FILE_USE_DETECT;
@@ -711,8 +712,8 @@ static int SMTPProcessCommandDATA(
                     if (state->files_ts->head->flags & FILE_STORE) {
                         flags |= FILE_STORE;
                     }
-                    uint32_t depth = smtp_config.content_inspect_min_size +
-                                     (state->toserver_data_count - state->toserver_last_data_stamp);
+                    depth = smtp_config.content_inspect_min_size +
+                            (state->toserver_data_count - state->toserver_last_data_stamp);
                     SCLogDebug("StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %" PRIu32,
                             depth);
                     StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, depth);
@@ -728,9 +729,45 @@ static int SMTPProcessCommandDATA(
                     }
                     SMTPNewFile(state->curr_tx, state->files_ts->tail);
                     break;
-                    // case MimeFileChunk:
+                case MimeSmtpFileChunk:
+                    // TODOrust1 in rust FileAppendData(state->files_ts, (uint8_t *) chunk, len);
+                    if (state->files_ts->tail && state->files_ts->tail->content_inspected == 0 &&
+                            state->files_ts->tail->size >= smtp_config.content_inspect_min_size) {
+                        depth = smtp_config.content_inspect_min_size +
+                                (state->toserver_data_count - state->toserver_last_data_stamp);
+                        AppLayerParserTriggerRawStreamReassembly(f, STREAM_TOSERVER);
+                        SCLogDebug(
+                                "StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %u", depth);
+                        StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, depth);
+                        /* after the start of the body inspection, disable the depth logic */
+                    } else if (state->files_ts->tail &&
+                               state->files_ts->tail->content_inspected > 0) {
+                        StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, 0);
+                        /* expand the limit as long as we get file data, as the file data is bigger
+                         * on the wire due to base64 */
+                    } else {
+                        uint32_t depth =
+                                smtp_config.content_inspect_min_size +
+                                (state->toserver_data_count - state->toserver_last_data_stamp);
+                        SCLogDebug("StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %" PRIu32,
+                                depth);
+                        StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, depth);
+                    }
+                    break;
+                case MimeSmtpFileClose:
+                    if (state->files_ts->tail &&
+                            state->files_ts->tail->state == FILE_STATE_OPENED) {
+                        if (FileCloseFile(state->files_ts, NULL, 0, flags) != 0) {
+                            SCLogDebug("FileCloseFile() failed: %d", ret);
+                        }
+                    } else {
+                        SCLogDebug("File already closed");
+                    }
+                    depth = state->toserver_data_count - state->toserver_last_data_stamp;
+                    AppLayerParserTriggerRawStreamReassembly(f, STREAM_TOSERVER);
+                    SCLogDebug("StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %u", depth);
+                    StreamTcpReassemblySetMinInspectDepth(f->protoctx, STREAM_TOSERVER, depth);
             }
-            // TODOrust1 act on file open and stuff...
         }
     }
 
