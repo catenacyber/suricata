@@ -21,9 +21,11 @@
 
 #include "suricata-common.h"
 #ifdef DEBUG
+#include "suricata.h"
+#endif
+#ifdef DEBUG
 #include "util-misc.h"
 #endif
-#include "suricata.h"
 #include "util-exception-policy.h"
 #include "stream-tcp-reassemble.h"
 

@@ -25,14 +25,6 @@
 
 #include "suricata-common.h"
 #ifdef UNITTESTS
-#include "util-unittest.h"
-#include "queue.h"
-#include "conf-yaml-loader.h"
-#include "conf.h"
-#include "util-misc.h"
-#include "detect-engine.h"
-#include "util-hashlist.h"
-#include "util-debug.h"
 #endif
 #include "util-mpm.h"
 
