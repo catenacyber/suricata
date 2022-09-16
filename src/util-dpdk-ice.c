@@ -32,6 +32,7 @@
 
 #include "util-dpdk-ice.h"
 
+#include "suricata-common.h"
 #ifdef HAVE_DPDK
 
 void iceDeviceSetRSSHashFunction(uint64_t *rss_hf)

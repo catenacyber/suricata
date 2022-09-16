@@ -23,9 +23,9 @@
  * Misc Windows utility functions
  */
 
+#include "suricata-common.h"
 #ifdef OS_WIN32
 
-#include "suricata-common.h"
 #include "win32-misc.h"
 #include "direct.h"
 #include "util-ip.h"

@@ -17,17 +17,10 @@
 
 #include "suricata-common.h"
 #include "suricata.h"
-#include "stream.h"
-#include "util-byte.h"
-#include "util-unittest.h"
-#include "util-hashlist.h"
 
-#include "util-print.h"
-#include "util-spm-bs.h"
 #include "util-enum.h"
 
 #include "app-layer.h"
-#include "app-layer-protos.h"
 #include "app-layer-parser.h"
 #include "app-layer-detect-proto.h"
 
@@ -1631,9 +1624,9 @@ void RegisterDNP3Parsers(void)
 }
 
 #ifdef UNITTESTS
-
-#include "flow-util.h"
 #include "stream-tcp.h"
+#include "flow-util.h"
+#include "util-unittest.h"
 
 /**
  * \brief Utility function to fix CRCs when mangling a frame.

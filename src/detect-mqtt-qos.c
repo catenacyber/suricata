@@ -22,14 +22,10 @@
  */
 
 #include "suricata-common.h"
-#include "conf.h"
-#include "detect.h"
 #include "detect-parse.h"
 #include "detect-engine.h"
-#include "detect-engine-content-inspection.h"
 #include "detect-mqtt-qos.h"
 #include "util-byte.h"
-#include "util-unittest.h"
 
 #include "rust.h"
 
@@ -180,6 +176,11 @@ void DetectMQTTQosFree(DetectEngineCtx *de_ctx, void *de_ptr)
  */
 
 #ifdef UNITTESTS
+#include "util-unittest.h"
+#include "detect-engine-content-inspection.h"
+#include "detect.h"
+#include "conf.h"
+
 /**
  * \test MQTTQosTestParse01 is a test for a valid value
  *

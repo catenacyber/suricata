@@ -28,6 +28,7 @@
 /* Only included into util-mpm-ac-ks.c, which defines FUNC_NAME
  *
  */
+#include "suricata-common.h"
 #ifdef FUNC_NAME
 
 /* This function handles (ctx->state_count < 32767) */

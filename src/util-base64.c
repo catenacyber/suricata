@@ -22,8 +22,11 @@
  *
  */
 
-#include "util-base64.h"
+#include "suricata-common.h"
+#ifdef UNITTESTS
 #include "util-unittest.h"
+#endif
+#include "util-base64.h"
 /* Constants */
 #define BASE64_TABLE_MAX  122
 

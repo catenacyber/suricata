@@ -191,6 +191,7 @@ void LogCustomFormatAddNode(LogCustomFormat *cf, LogCustomFormatNode *node)
         return;
     }
 
+#include "suricata-common.h"
 #ifdef DEBUG
     SCLogDebug("%d-> n.type=[%d] n.maxlen=[%d] n.data=[%s]",
             cf->cf_n, node->type, node->maxlen, node->data);

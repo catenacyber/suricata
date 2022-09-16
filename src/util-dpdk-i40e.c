@@ -32,6 +32,7 @@
 
 #include "util-dpdk-i40e.h"
 
+#include "suricata-common.h"
 #ifdef HAVE_DPDK
 
 #define I40E_RSS_HKEY_LEN 52

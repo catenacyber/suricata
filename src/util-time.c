@@ -50,6 +50,7 @@
  * would be considered timed out.
  */
 
+#include "suricata-common.h"
 #ifdef OS_WIN32
 /* for MinGW we need to set _POSIX_C_SOURCE before including
  * sys/time.h. */
@@ -58,7 +59,6 @@
 #endif
 #endif
 
-#include "suricata-common.h"
 #include "suricata.h"
 #include "detect.h"
 #include "threads.h"

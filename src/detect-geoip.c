@@ -26,19 +26,21 @@
  */
 
 #include "suricata-common.h"
-#include "debug.h"
-#include "decode.h"
-#include "detect.h"
-
-#include "detect-parse.h"
-#include "detect-engine.h"
+#ifdef UNITTESTS
+#include "util-unittest-helper.h"
+#include "util-unittest.h"
+#include "util-mem.h"
 #include "detect-engine-mpm.h"
+#ifdef UNITTESTS
+#include "detect-engine-mpm.h"
+#endif
+#include "detect-parse.h"
+#include "detect.h"
+#include "decode.h"
+#include "debug.h"
+#endif
 
 #include "detect-geoip.h"
-
-#include "util-mem.h"
-#include "util-unittest.h"
-#include "util-unittest-helper.h"
 
 #ifndef HAVE_GEOIP
 

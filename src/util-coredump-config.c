@@ -26,6 +26,7 @@
 #define _FILE_OFFSET_BITS 64
 #include "util-coredump-config.h"
 #include "conf.h"
+#include "suricata-common.h"
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif

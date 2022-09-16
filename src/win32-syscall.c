@@ -32,6 +32,7 @@
  * https://wutils.com/wmi/root/wmi/msndis_tcpoffloadparameters/
  */
 
+#include "suricata-common.h"
 #ifdef OS_WIN32
 
 #include <inttypes.h>
@@ -51,7 +52,6 @@
 #undef _snprintf
 #define _snprintf StringCbPrintfA
 
-#include "suricata-common.h"
 #include "util-debug.h"
 #include "util-device.h"
 #include "util-mem.h"

@@ -23,13 +23,16 @@
  * File based pcap packet acquisition support
  */
 
+#include "suricata-common.h"
+#ifdef DEBUG
+#include "util-exception-policy.h"
+#endif
+#include "source-pcap-file.h"
 #include "source-pcap-file-helper.h"
 #include "suricata.h"
 #include "util-datalink.h"
 #include "util-checksum.h"
 #include "util-profiling.h"
-#include "source-pcap-file.h"
-#include "util-exception-policy.h"
 
 extern int max_pending_packets;
 extern PcapFileGlobalVars pcap_g;

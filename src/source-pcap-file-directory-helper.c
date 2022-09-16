@@ -229,6 +229,7 @@ TmEcode PcapDetermineDirectoryOrFile(char *filename, DIR **directory)
 
 int PcapDirectoryGetModifiedTime(char const *file, struct timespec *out)
 {
+#include "suricata-common.h"
 #ifdef OS_WIN32
     struct _stat buf;
 #else

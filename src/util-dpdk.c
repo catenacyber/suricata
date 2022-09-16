@@ -26,6 +26,7 @@
 
 void DPDKCleanupEAL(void)
 {
+#include "suricata-common.h"
 #ifdef HAVE_DPDK
     if (run_mode == RUNMODE_DPDK) {
         int retval = rte_eal_cleanup();

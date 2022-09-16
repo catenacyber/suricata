@@ -32,6 +32,7 @@
 
 #include "util-dpdk-ixgbe.h"
 
+#include "suricata-common.h"
 #ifdef HAVE_DPDK
 
 void ixgbeDeviceSetRSSHashFunction(uint64_t *rss_hf)

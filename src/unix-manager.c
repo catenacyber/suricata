@@ -22,11 +22,11 @@
  */
 
 #include "suricata-common.h"
+#include "runmodes.h"
 #include "suricata.h"
 #include "unix-manager.h"
 #include "detect-engine.h"
 #include "tm-threads.h"
-#include "runmodes.h"
 #include "conf.h"
 #include "runmode-unix-socket.h"
 

@@ -25,8 +25,10 @@
  * File-like output for logging: syslog
  */
 
-#include "suricata-common.h" /* errno.h, string.h, etc. */
-#include "output.h"          /* DEFAULT_LOG_* */
+#include "suricata-common.h"
+#ifdef OS_WIN32
+#include "output.h"
+#endif
 #include "output-eve-syslog.h"
 #include "util-syslog.h"
 

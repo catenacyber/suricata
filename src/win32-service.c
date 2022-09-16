@@ -23,9 +23,9 @@
  * Windows service functions
  */
 
+#include "suricata-common.h"
 #ifdef OS_WIN32
 
-#include "suricata-common.h"
 #include "suricata.h"
 #include "win32-service.h"
 #include "util-debug.h"
