@@ -27,6 +27,7 @@
 #ifdef UNITTESTS
 #include "app-layer-parser.h"
 #endif
+#include "rust.h"
 
 #include "app-layer-nfs-udp.h"
 #include "util-enum.h"

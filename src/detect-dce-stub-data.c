@@ -33,7 +33,7 @@
 #include "flow-util.h"
 #include "detect-engine-build.h"
 #endif
-
+#include "rust.h"
 #include "detect-parse.h"
 
 #include "detect-engine.h"

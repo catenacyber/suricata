@@ -25,8 +25,7 @@
  */
 
 #include "suricata-common.h"
-#ifdef UNITTESTS
-#endif
+#include "suricata.h"
 
 #include "util-byte.h"
 #include "util-enum.h"

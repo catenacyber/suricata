@@ -31,6 +31,8 @@
 #include "app-layer-parser.h"
 #include "stream-tcp.h"
 #endif
+#include "rust.h"
+#include "suricata.h"
 
 #include "app-layer-detect-proto.h"
 #include "app-layer-ssh.h"

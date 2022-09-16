@@ -30,6 +30,7 @@
 #include "app-layer-parser.h"
 #include "util-unittest.h"
 #endif
+#include "rust.h"
 
 #include "app-layer-ike.h"
 

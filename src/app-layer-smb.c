@@ -20,6 +20,7 @@
 #include "util-unittest.h"
 #include "app-layer-parser.h"
 #endif
+#include "rust.h"
 
 #include "app-layer-smb.h"
 

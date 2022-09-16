@@ -30,6 +30,9 @@
 #include "app-layer-parser.h"
 #include "app-layer-htp.h"
 #include "app-layer-htp-xff.h"
+#ifndef HAVE_MEMRCHR
+#include "util-memrchr.h"
+#endif
 
 /** XFF header value minimal length */
 #define XFF_CHAIN_MINLEN 7

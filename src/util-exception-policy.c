@@ -28,6 +28,7 @@
 #endif
 #include "util-exception-policy.h"
 #include "stream-tcp-reassemble.h"
+#include "suricata.h"
 
 void ExceptionPolicyApply(Packet *p, enum ExceptionPolicy policy, enum PacketDropReason drop_reason)
 {
