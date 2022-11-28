@@ -17,6 +17,7 @@
 
 use super::mime;
 use crate::filecontainer::FileContainer;
+use std::ffi::CStr;
 use std::os::raw::c_uchar;
 
 #[repr(u8)]
@@ -399,3 +400,63 @@ pub unsafe extern "C" fn rs_mime_smtp_get_filename(
     }
 }
 //TODOrust2 = lua
+
+static mut MIME_SMTP_CONFIG_DECODE_MIME: bool = false;
+static mut MIME_SMTP_CONFIG_DECODE_BASE64: bool = false;
+static mut MIME_SMTP_CONFIG_DECODE_QUOTED: bool = false;
+static mut MIME_SMTP_CONFIG_EXTRACT_URLS: bool = false;
+static mut MIME_SMTP_CONFIG_LOG_URL_SCHEME: bool = false;
+static mut MIME_SMTP_CONFIG_BODY_MD5: bool = false;
+static mut MIME_SMTP_CONFIG_HEADER_VALUE_DEPTH: u32 = 0;
+static mut MIME_SMTP_CONFIG_EXTRACT_URL_SCHEMES: Vec<&str> = Vec::new();
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_decode_mime(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_DECODE_MIME = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_decode_base64(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_DECODE_BASE64 = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_decode_quoted(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_DECODE_QUOTED = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_extract_urls(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_EXTRACT_URLS = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_log_url_scheme(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_LOG_URL_SCHEME = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_body_md5(val: std::os::raw::c_int) {
+    MIME_SMTP_CONFIG_BODY_MD5 = val != 0;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_header_value_depth(val: u32) {
+    MIME_SMTP_CONFIG_HEADER_VALUE_DEPTH = val;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_extract_urls_scheme_reset() {
+    MIME_SMTP_CONFIG_EXTRACT_URL_SCHEMES.clear();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rs_mime_smtp_config_extract_urls_scheme_add(
+    str: *const std::os::raw::c_char,
+) -> std::os::raw::c_int {
+    let scheme: &CStr = CStr::from_ptr(str); //unsafe
+    if let Ok(s) = scheme.to_str() {
+        MIME_SMTP_CONFIG_EXTRACT_URL_SCHEMES.push(s);
+    }
+    return -1;
+}

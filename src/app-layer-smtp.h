@@ -86,27 +86,14 @@ typedef struct SMTPTransaction_ {
     TAILQ_ENTRY(SMTPTransaction_) next;
 } SMTPTransaction;
 
-// TODOrust2 config
 /**
  * \brief Structure for containing configuration options
  *
  */
-typedef struct MimeDecConfig {
-    bool decode_base64;             /**< Decode base64 bodies */
-    bool decode_quoted_printable;   /**< Decode quoted-printable bodies */
-    bool extract_urls;              /**< Extract and store URLs in data structure */
-    ConfNode *extract_urls_schemes; /**< List of schemes of which to
-                                         extract urls  */
-    bool log_url_scheme;            /**< Log the scheme of extracted URLs */
-    bool body_md5;                  /**< Compute md5 sum of body */
-    uint32_t header_value_depth;    /**< Depth of which to store header values
-                                         (Default is 2000) */
-} MimeDecConfig;
 
 typedef struct SMTPConfig {
 
     bool decode_mime;
-    MimeDecConfig mime_config;
     uint32_t content_limit;
     uint32_t content_inspect_min_size;
     uint32_t content_inspect_window;

@@ -242,8 +242,7 @@ SCEnumCharMap smtp_reply_map[ ] = {
 };
 
 /* Create SMTP config structure */
-SMTPConfig smtp_config = { false, { false, false, false, NULL, false, false, 0 }, 0, 0, 0, false,
-    STREAMING_BUFFER_CONFIG_INITIALIZER };
+SMTPConfig smtp_config = { false, 0, 0, 0, false, STREAMING_BUFFER_CONFIG_INITIALIZER };
 
 static SMTPString *SMTPStringAlloc(void);
 
@@ -268,27 +267,30 @@ static void SMTPConfigure(void) {
         int val;
         int ret = ConfGetChildValueBool(config, "decode-mime", &val);
         if (ret) {
-            smtp_config.decode_mime = val;
+            rs_mime_smtp_config_decode_mime(val);
         }
 
         ret = ConfGetChildValueBool(config, "decode-base64", &val);
         if (ret) {
-            smtp_config.mime_config.decode_base64 = val;
+            rs_mime_smtp_config_decode_base64(val);
         }
 
         ret = ConfGetChildValueBool(config, "decode-quoted-printable", &val);
         if (ret) {
-            smtp_config.mime_config.decode_quoted_printable = val;
+            rs_mime_smtp_config_decode_quoted(val);
         }
 
         ret = ConfGetChildValueInt(config, "header-value-depth", &imval);
         if (ret) {
-            smtp_config.mime_config.header_value_depth = (uint32_t) imval;
+            if (imval < 0 || imval > UINT32_MAX) {
+                FatalError(SC_ERR_FATAL, "Invalid value for header-value-depth");
+            }
+            rs_mime_smtp_config_header_value_depth((uint32_t)imval);
         }
 
         ret = ConfGetChildValueBool(config, "extract-urls", &val);
         if (ret) {
-            smtp_config.mime_config.extract_urls = val;
+            rs_mime_smtp_config_extract_urls(val);
         }
 
         /* Parse extract-urls-schemes from mime config, add '://' suffix to found schemes,
@@ -298,65 +300,32 @@ static void SMTPConfigure(void) {
         if (extract_urls_schemes) {
             ConfNode *scheme = NULL;
 
+            rs_mime_smtp_config_extract_urls_scheme_reset();
             TAILQ_FOREACH (scheme, &extract_urls_schemes->head, next) {
-                /* new_val_len: scheme value from config e.g. 'http' + '://' + null terminator */
-                size_t new_val_len = strlen(scheme->val) + 3 + 1;
-                if (new_val_len > UINT16_MAX) {
+                size_t scheme_len = strlen(scheme->val);
+                if (scheme_len > UINT16_MAX) {
                     FatalError(SC_ERR_FATAL, "Too long value for extract-urls-schemes");
                 }
-                char *new_val = SCMalloc(new_val_len);
-                if (unlikely(new_val == NULL)) {
-                    FatalError(SC_ERR_FATAL, "SCMalloc failure.");
+                int r = rs_mime_smtp_config_extract_urls_scheme_add(scheme->val);
+                if (r < 0) {
+                    FatalError(SC_ERR_FATAL, "Failed to add smtp extract url scheme");
                 }
-
-                int r = snprintf(new_val, new_val_len, "%s://", scheme->val);
-                if (r < 0 || r >= (int)new_val_len) {
-                    FatalError(SC_ERR_FATAL, "snprintf failure.");
-                }
-
-                /* replace existing scheme value stored on the linked list with new value including
-                 * '://' suffix */
-                SCFree(scheme->val);
-                scheme->val = new_val;
             }
-
-            smtp_config.mime_config.extract_urls_schemes = extract_urls_schemes;
         } else {
             /* Add default extract url scheme 'http' since
              * extract-urls-schemes wasn't found in the config */
-            ConfNode *seq_node = ConfNodeNew();
-            if (unlikely(seq_node == NULL)) {
-                FatalError(SC_ERR_FATAL, "ConfNodeNew failure.");
-            }
-            ConfNode *scheme = ConfNodeNew();
-            if (unlikely(scheme == NULL)) {
-                FatalError(SC_ERR_FATAL, "ConfNodeNew failure.");
-            }
-
-            seq_node->name = SCStrdup("extract-urls-schemes");
-            if (unlikely(seq_node->name == NULL)) {
-                FatalError(SC_ERR_FATAL, "SCStrdup failure.");
-            }
-            scheme->val = SCStrdup("http://");
-            if (unlikely(scheme->val == NULL)) {
-                FatalError(SC_ERR_FATAL, "SCStrdup failure.");
-            }
-
-            seq_node->is_seq = 1;
-            TAILQ_INSERT_TAIL(&seq_node->head, scheme, next);
-            TAILQ_INSERT_TAIL(&config->head, seq_node, next);
-
-            smtp_config.mime_config.extract_urls_schemes = seq_node;
+            rs_mime_smtp_config_extract_urls_scheme_reset();
+            rs_mime_smtp_config_extract_urls_scheme_add("http://");
         }
 
         ret = ConfGetChildValueBool(config, "log-url-scheme", &val);
         if (ret) {
-            smtp_config.mime_config.log_url_scheme = val;
+            rs_mime_smtp_config_log_url_scheme(val);
         }
 
         ret = ConfGetChildValueBool(config, "body-md5", &val);
         if (ret) {
-            smtp_config.mime_config.body_md5 = val;
+            rs_mime_smtp_config_body_md5(val);
         }
     }
 
