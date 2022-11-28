@@ -626,8 +626,7 @@ static int SMTPProcessCommandDATA(SMTPState *state, SMTPTransaction *tx, Flow *f
         } else if (smtp_config.decode_mime && tx->mime_state != NULL) {
             /* Complete parsing task */
             uint32_t events = 0;
-            // TODOrust3 is this needed ? what return ?
-            uint8_t ret = rs_smtp_mime_complete(tx->mime_state, &events);
+            rs_smtp_mime_complete(tx->mime_state, &events);
 
             /* Generate decoder events */
             SetMimeEvents(state, events);
