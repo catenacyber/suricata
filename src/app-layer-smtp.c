@@ -329,9 +329,6 @@ static void SMTPConfigure(void) {
         }
     }
 
-    /* Pass mime config data to MimeDec API */
-    // TODOrust2 MimeDecSetConfig(&smtp_config.mime_config);
-
     smtp_config.content_limit = FILEDATA_CONTENT_LIMIT;
     smtp_config.content_inspect_window = FILEDATA_CONTENT_INSPECT_WINDOW;
     smtp_config.content_inspect_min_size = FILEDATA_CONTENT_INSPECT_MIN_SIZE;
