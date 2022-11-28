@@ -168,7 +168,18 @@ fn log_data(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), JsonErr
     log_data_header(js, ctx, "from")?;
     log_field_comma(js, ctx, "to", "to")?;
     log_field_comma(js, ctx, "cc", "cc")?;
-    //TODOrust5 : url, attach...
+
+    js.set_string("status", "PARSE_DONE")?;
+
+    if !ctx.attachments.is_empty() {
+        js.open_array("attachment")?;
+        for a in &ctx.attachments {
+            js.append_string(&String::from_utf8_lossy(&a))?;
+        }
+        js.close()?;
+    }
+
+    //TODOrust5 : url
 
     return Ok(());
 }

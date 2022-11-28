@@ -59,6 +59,7 @@ pub struct MimeStateSMTP<'a> {
     pub(crate) headers: Vec<MimeHeader>,
     pub(crate) main_headers_nb: usize,
     filename: Vec<u8>,
+    pub(crate) attachments: Vec<Vec<u8>>,
     boundary: Vec<u8>,
     quoted_buffer: Vec<u8>,
     encoding: MimeSmtpEncoding,
@@ -74,6 +75,7 @@ pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> 
         headers: Vec::new(),
         main_headers_nb: 0,
         filename: Vec::new(),
+        attachments: Vec::new(),
         boundary: Vec::new(),
         quoted_buffer: Vec::new(),
         encoding: MimeSmtpEncoding::Plain,
@@ -143,6 +145,9 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
                     mime::mime_find_header_token(&h.value, b"filename", &mut sections_values)
                 {
                     ctx.filename.extend_from_slice(value);
+                    let mut newname = Vec::new();
+                    newname.extend_from_slice(value);
+                    ctx.attachments.push(newname);
                     sections_values.clear();
                 }
             }
@@ -161,6 +166,9 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
                     mime::mime_find_header_token(&h.value, b"name", &mut sections_values)
                 {
                     ctx.filename.extend_from_slice(value);
+                    let mut newname = Vec::new();
+                    newname.extend_from_slice(value);
+                    ctx.attachments.push(newname);
                     sections_values.clear();
                 }
             }

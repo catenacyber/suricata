@@ -256,6 +256,7 @@ fn mime_consume_until_eol(input: &[u8]) -> IResult<&[u8], bool> {
 pub fn mime_parse_header_line(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let (input, name) = take_till(|ch: u8| ch == b':')(input)?;
     let (input, _) = char(':')(input)?;
+    let (input, _) = take_while(|ch: u8| is_mime_space(ch))(input)?;
     return Ok((input, name));
 }
 
