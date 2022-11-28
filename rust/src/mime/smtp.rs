@@ -235,7 +235,14 @@ fn mime_smtp_parse_line(
                     FileAppendData(ctx.files, full.as_ptr(), full.len() as u32);
                 },
                 MimeSmtpEncoding::Base64 => {
-                    //TODOrust1 base64
+                    match base64::decode(i) {
+                        Ok(dec) => unsafe {
+                            FileAppendData(ctx.files, dec.as_ptr(), dec.len() as u32);
+                        },
+                        Err(_) => {
+                            //TODOrust5 set event ?
+                        }
+                    }
                 }
                 MimeSmtpEncoding::QuotedPrintable => {
                     let mut c = 0;
