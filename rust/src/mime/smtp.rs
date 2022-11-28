@@ -17,6 +17,7 @@
 
 use super::mime;
 use crate::filecontainer::FileContainer;
+use digest::generic_array::{typenum::U16, GenericArray};
 use std::ffi::CStr;
 use std::os::raw::c_uchar;
 
@@ -41,6 +42,14 @@ pub struct MimeHeader {
     pub value: Vec<u8>,
 }
 
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
+pub enum MimeSmtpMd5State {
+    MimeSmtpMd5Disabled = 0,
+    MimeSmtpMd5Started = 1,
+    MimeSmtpMd5Completed = 2,
+}
+
 #[derive(Debug)]
 pub struct MimeStateSMTP<'a> {
     pub state_flag: MimeSmtpParserState,
@@ -51,6 +60,9 @@ pub struct MimeStateSMTP<'a> {
     quoted_buffer: Vec<u8>,
     encoding: MimeSmtpEncoding,
     files: &'a mut FileContainer,
+    md5: md5::Md5,
+    md5_state: MimeSmtpMd5State,
+    md5_result: GenericArray<u8, U16>,
 }
 
 pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> {
@@ -63,6 +75,9 @@ pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> 
         quoted_buffer: Vec::new(),
         encoding: MimeSmtpEncoding::Plain,
         files: files,
+        md5: Md5::new(),
+        md5_state: MimeSmtpMd5State::MimeSmtpMd5Disabled,
+        md5_result: [0; 16].into(),
     };
     return Some(r);
 }
@@ -181,6 +196,10 @@ fn mime_smtp_parse_line(
 ) -> (MimeSmtpParserResult, u32) {
     match ctx.state_flag {
         MimeSmtpParserState::MimeSmtpStart => {
+            if unsafe { MIME_SMTP_CONFIG_BODY_MD5 } {
+                ctx.md5 = Md5::new();
+                ctx.md5_state = MimeSmtpMd5State::MimeSmtpMd5Started;
+            }
             if i.len() == 0 {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpBody;
                 mime_smtp_process_headers(ctx);
@@ -215,6 +234,9 @@ fn mime_smtp_parse_line(
             }
         }
         MimeSmtpParserState::MimeSmtpBody => {
+            if ctx.md5_state == MimeSmtpMd5State::MimeSmtpMd5Started {
+                Update::update(&mut ctx.md5, &full);
+            }
             if ctx.boundary.len() > 0 && i.len() >= ctx.boundary.len() {
                 if &i[..ctx.boundary.len()] == ctx.boundary {
                     ctx.state_flag = MimeSmtpParserState::MimeSmtpStart;
@@ -296,6 +318,10 @@ pub unsafe extern "C" fn rs_smtp_mime_parse_line(
 }
 
 fn mime_smtp_complete(ctx: &mut MimeStateSMTP) -> (MimeSmtpParserResult, u32) {
+    if ctx.md5_state == MimeSmtpMd5State::MimeSmtpMd5Started {
+        ctx.md5_state = MimeSmtpMd5State::MimeSmtpMd5Completed;
+        ctx.md5_result = ctx.md5.finalize_reset();
+    }
     return (MimeSmtpParserResult::MimeSmtpFileClose, 0);
 }
 
@@ -319,6 +345,7 @@ fn log_subject_md5(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), 
         if mime::rs_equals_lowercase(&h.name, b"subject") {
             let hash = format!("{:x}", Md5::new().chain(&h.value).finalize());
             js.set_string("subject_md5", &hash)?;
+            break;
         }
     }
     return Ok(());
@@ -331,12 +358,19 @@ pub unsafe extern "C" fn rs_mime_smtp_log_subject_md5(
     return log_subject_md5(js, ctx).is_ok();
 }
 
+fn log_body_md5(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), JsonError> {
+    if ctx.md5_state == MimeSmtpMd5State::MimeSmtpMd5Completed {
+        let hash = format!("{:x}", ctx.md5_result);
+        js.set_string("body_md5", &hash)?;
+    }
+    return Ok(());
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn rs_mime_smtp_log_body_md5(
     js: &mut JsonBuilder, ctx: &mut MimeStateSMTP,
 ) -> bool {
-    //TODOrust2 get body md5
-    return log_subject_md5(js, ctx).is_ok();
+    return log_body_md5(js, ctx).is_ok();
 }
 
 #[no_mangle]
@@ -399,7 +433,7 @@ pub unsafe extern "C" fn rs_mime_smtp_get_filename(
         *filename_len = 0;
     }
 }
-//TODOrust2 = lua
+//TODOrust5 = lua
 
 static mut MIME_SMTP_CONFIG_DECODE_MIME: bool = false;
 static mut MIME_SMTP_CONFIG_DECODE_BASE64: bool = false;
