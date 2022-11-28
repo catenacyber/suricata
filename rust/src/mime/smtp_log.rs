@@ -166,8 +166,8 @@ fn log_data_header(
 
 fn log_data(js: &mut JsonBuilder, ctx: &mut MimeStateSMTP) -> Result<(), JsonError> {
     log_data_header(js, ctx, "from")?;
-    log_data_header(js, ctx, "to")?;
-    log_data_header(js, ctx, "cc")?;
+    log_field_comma(js, ctx, "to", "to")?;
+    log_field_comma(js, ctx, "cc", "cc")?;
     //TODOrust5 : url, attach...
 
     return Ok(());
