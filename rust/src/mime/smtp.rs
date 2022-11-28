@@ -168,6 +168,9 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
                 if let Ok(value) =
                     mime::mime_find_header_token(&h.value, b"boundary", &mut sections_values)
                 {
+                    // start wih 2 additional hyphens
+                    ctx.boundary.push(b'-');
+                    ctx.boundary.push(b'-');
                     ctx.boundary.extend_from_slice(value);
                     sections_values.clear();
                 }
@@ -210,7 +213,7 @@ fn mime_smtp_parse_line(
                     ctx.main_headers_nb = ctx.headers.len();
                 }
                 return (MimeSmtpParserResult::MimeSmtpFileOpen, 0);
-            } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
+            } else if let Ok((value, name)) = mime::mime_parse_header_line(i) {
                 ctx.state_flag = MimeSmtpParserState::MimeSmtpHeader;
                 let mut h = MimeHeader::default();
                 h.name.extend_from_slice(name);
@@ -229,7 +232,7 @@ fn mime_smtp_parse_line(
             } else if i[0] == b' ' || i[0] == b'\t' {
                 let last = ctx.headers.len() - 1;
                 ctx.headers[last].value.extend_from_slice(&i[1..]);
-            } else if let Ok((name, value)) = mime::mime_parse_header_line(i) {
+            } else if let Ok((value, name)) = mime::mime_parse_header_line(i) {
                 let mut h = MimeHeader::default();
                 h.name.extend_from_slice(name);
                 h.value.extend_from_slice(value);
@@ -364,7 +367,6 @@ pub unsafe extern "C" fn rs_mime_smtp_get_filename(
 }
 //TODOrust5 = lua
 
-static mut MIME_SMTP_CONFIG_DECODE_MIME: bool = false;
 static mut MIME_SMTP_CONFIG_DECODE_BASE64: bool = false;
 static mut MIME_SMTP_CONFIG_DECODE_QUOTED: bool = false;
 static mut MIME_SMTP_CONFIG_EXTRACT_URLS: bool = false;
@@ -372,11 +374,6 @@ static mut MIME_SMTP_CONFIG_LOG_URL_SCHEME: bool = false;
 static mut MIME_SMTP_CONFIG_BODY_MD5: bool = false;
 static mut MIME_SMTP_CONFIG_HEADER_VALUE_DEPTH: u32 = 0;
 static mut MIME_SMTP_CONFIG_EXTRACT_URL_SCHEMES: Vec<&str> = Vec::new();
-
-#[no_mangle]
-pub unsafe extern "C" fn rs_mime_smtp_config_decode_mime(val: std::os::raw::c_int) {
-    MIME_SMTP_CONFIG_DECODE_MIME = val != 0;
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn rs_mime_smtp_config_decode_base64(val: std::os::raw::c_int) {

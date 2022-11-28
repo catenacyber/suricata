@@ -267,7 +267,7 @@ static void SMTPConfigure(void) {
         int val;
         int ret = ConfGetChildValueBool(config, "decode-mime", &val);
         if (ret) {
-            rs_mime_smtp_config_decode_mime(val);
+            smtp_config.decode_mime = val;
         }
 
         ret = ConfGetChildValueBool(config, "decode-base64", &val);
@@ -664,11 +664,6 @@ static int SMTPProcessCommandDATA(SMTPState *state, SMTPTransaction *tx, Flow *f
                         // not an attachment
                         break;
                     }
-                    /* Set storage flag if applicable since only the first file in the
-                     * flow seems to be processed by the 'filestore' detector */
-                    if (tx->files_ts.head->flags & FILE_STORE) {
-                        flags |= FILE_STORE;
-                    }
                     depth = smtp_config.content_inspect_min_size +
                             (state->toserver_data_count - state->toserver_last_data_stamp);
                     SCLogDebug("StreamTcpReassemblySetMinInspectDepth STREAM_TOSERVER %" PRIu32,
@@ -683,6 +678,11 @@ static int SMTPProcessCommandDATA(SMTPState *state, SMTPTransaction *tx, Flow *f
                                 state->file_track_id++, filename, filename_len, NULL, 0,
                                 flags) != 0) {
                         SCLogDebug("FileOpenFile() failed");
+                    }
+                    /* Set storage flag if applicable since only the first file in the
+                     * flow seems to be processed by the 'filestore' detector */
+                    if (tx->files_ts.head->flags & FILE_STORE) {
+                        flags |= FILE_STORE;
                     }
                     SMTPNewFile(state->curr_tx, tx->files_ts.tail);
                     break;
