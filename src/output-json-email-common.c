@@ -116,11 +116,14 @@ static void EveEmailLogJSONCustom(OutputJsonEmailCtx *email_ctx, JsonBuilder *js
               ((email_ctx->flags & LOG_EMAIL_EXTENDED) && (email_fields[f].flags & LOG_EMAIL_EXTENDED))
            ) {
             if (email_fields[f].flags & LOG_EMAIL_ARRAY) {
-                rs_mime_smtp_log_field_array(js, entity, email_fields[f].email_field);
+                rs_mime_smtp_log_field_array(
+                        js, entity, email_fields[f].email_field, email_fields[f].config_field);
             } else if (email_fields[f].flags & LOG_EMAIL_COMMA) {
-                rs_mime_smtp_log_field_comma(js, entity, email_fields[f].email_field);
+                rs_mime_smtp_log_field_comma(
+                        js, entity, email_fields[f].email_field, email_fields[f].config_field);
             } else {
-                rs_mime_smtp_log_field_string(js, entity, email_fields[f].email_field);
+                rs_mime_smtp_log_field_string(
+                        js, entity, email_fields[f].email_field, email_fields[f].config_field);
             }
 
         }

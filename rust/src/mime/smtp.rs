@@ -373,28 +373,101 @@ pub unsafe extern "C" fn rs_mime_smtp_log_body_md5(
     return log_body_md5(js, ctx).is_ok();
 }
 
+fn log_field_array(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, c: &str, e: &str,
+) -> Result<(), JsonError> {
+
+    let mark = js.get_mark();
+    let mut found = false;
+    js.open_array(c)?;
+
+    for h in &ctx.headers[..ctx.main_headers_nb] {
+        if mime::rs_equals_lowercase(&h.name, e.as_bytes()) {
+            found = true;
+            js.append_string(&String::from_utf8_lossy(&h.value))?;
+        }
+    }
+
+    if found {
+        js.close()?;
+    } else {
+        js.restore_mark(&mark)?;
+    }
+
+    return Ok(());
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn rs_mime_smtp_log_field_array(
-    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, email: *const std::os::raw::c_char,
+    config: *const std::os::raw::c_char,
 ) -> bool {
-    //TODOrust2 check previous behavior
-    return log_subject_md5(js, ctx).is_ok();
+    let e: &CStr = CStr::from_ptr(email); //unsafe
+    if let Ok(email_field) = e.to_str() {
+        let c: &CStr = CStr::from_ptr(config); //unsafe
+        if let Ok(config_field) = c.to_str() {
+            return log_field_array(js, ctx, config_field, email_field).is_ok();
+        }
+    }
+    return false;
+}
+
+fn log_field_comma(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, c: &str, e: &str,
+) -> Result<(), JsonError> {
+    for h in &ctx.headers[..ctx.main_headers_nb] {
+        if mime::rs_equals_lowercase(&h.name, e.as_bytes()) {
+            js.open_array(c)?;
+            for s in h.value.split(|c| *c == b',') {
+                js.append_string(&String::from_utf8_lossy(s))?;
+            }
+            js.close()?;
+            break;
+        }
+    }
+    return Ok(());
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn rs_mime_smtp_log_field_comma(
-    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, email: *const std::os::raw::c_char,
+    config: *const std::os::raw::c_char,
 ) -> bool {
-    //TODOrust2 check previous behavior
-    return log_subject_md5(js, ctx).is_ok();
+    let e: &CStr = CStr::from_ptr(email); //unsafe
+    if let Ok(email_field) = e.to_str() {
+        let c: &CStr = CStr::from_ptr(config); //unsafe
+        if let Ok(config_field) = c.to_str() {
+            return log_field_comma(js, ctx, config_field, email_field).is_ok();
+        }
+    }
+    return false;
+}
+
+fn log_field_string(
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, c: &str, e: &str,
+) -> Result<(), JsonError> {
+    for h in &ctx.headers[..ctx.main_headers_nb] {
+        if mime::rs_equals_lowercase(&h.name, e.as_bytes()) {
+            js.set_string(c, &String::from_utf8_lossy(&h.value))?;
+            break;
+        }
+    }
+    return Ok(());
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn rs_mime_smtp_log_field_string(
-    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, str: *const std::os::raw::c_char,
+    js: &mut JsonBuilder, ctx: &mut MimeStateSMTP, email: *const std::os::raw::c_char,
+    config: *const std::os::raw::c_char,
 ) -> bool {
-    //TODOrust2 check previous behavior
-    return log_subject_md5(js, ctx).is_ok();
+    let e: &CStr = CStr::from_ptr(email); //unsafe
+    if let Ok(email_field) = e.to_str() {
+        let c: &CStr = CStr::from_ptr(config); //unsafe
+        if let Ok(config_field) = c.to_str() {
+            return log_field_string(js, ctx, config_field, email_field).is_ok();
+        }
+    }
+    return false;
 }
 
 #[no_mangle]
