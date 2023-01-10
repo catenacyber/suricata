@@ -406,8 +406,8 @@ fn mime_smtp_parse_line(
                                 FileAppendData(ctx.files, dec.as_ptr(), dec.len() as u32);
                             }
                         }
+                        // else TODOrust5 set event ?
                     }
-                    // else TODOrust5 set event ?
                 }
                 MimeSmtpEncoding::QuotedPrintable => {
                     if unsafe { MIME_SMTP_CONFIG_DECODE_QUOTED } {
