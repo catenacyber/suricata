@@ -1059,20 +1059,8 @@ static int SMTPProcessRequest(SMTPState *state, Flow *f, AppLayerParserState *ps
                     SMTPNewFile(tx, tx->files_ts.tail);
                 }
             } else if (smtp_config.decode_mime) {
-                if (tx->mime_state) {
-                    /* We have 2 chained mails and did not detect the end
-                     * of first one. So we start a new transaction. */
-                    // TODOrust4 check later : may need to add a condition about
-                    // tx->mime_state->state_flag < end
-                    rs_mime_smtp_set_state(tx->mime_state, MimeSmtpParserError);
-                    SMTPSetEvent(state, SMTP_DECODER_EVENT_UNPARSABLE_CONTENT);
-                    tx = SMTPTransactionCreate();
-                    if (tx == NULL)
-                        return -1;
-                    state->curr_tx = tx;
-                    TAILQ_INSERT_TAIL(&state->tx_list, tx, next);
-                    tx->tx_id = state->tx_cnt++;
-                }
+                // should happen only once per transaction
+                DEBUG_VALIDATE_BUG_ON(tx->mime_state);
                 tx->mime_state = rs_mime_smtp_state_init(&tx->files_ts);
                 if (tx->mime_state == NULL) {
                     SCLogDebug("MimeDecInitParser() failed to "
