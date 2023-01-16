@@ -23,6 +23,7 @@ use crate::core::Direction;
 use crate::detect::uint::{detect_match_uint, DetectUintData};
 use std::ffi::CStr;
 use std::str::FromStr;
+use base64::{Engine as _, engine::general_purpose};
 
 fn http2_tx_has_frametype(
     tx: &mut HTTP2Transaction, direction: Direction, value: u8,
@@ -886,7 +887,7 @@ pub unsafe extern "C" fn rs_http2_tx_set_uri(
 }
 
 fn http2_tx_set_settings(state: &mut HTTP2State, input: &[u8]) {
-    match base64::decode(input) {
+    match general_purpose::STANDARD_NO_PAD.decode(input) {
         Ok(dec) => {
             if dec.len() % 6 != 0 {
                 state.set_event(HTTP2Event::InvalidHTTP1Settings);

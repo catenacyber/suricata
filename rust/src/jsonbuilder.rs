@@ -20,6 +20,7 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::str::Utf8Error;
+use base64::{Engine as _, engine::general_purpose};
 
 const INIT_SIZE: usize = 4096;
 
@@ -309,7 +310,7 @@ impl JsonBuilder {
         match self.current_state() {
             State::ArrayFirst => {
                 self.buf.push('"');
-                base64::encode_config_buf(val, base64::STANDARD, &mut self.buf);
+                general_purpose::STANDARD.encode_string(val, &mut self.buf);
                 self.buf.push('"');
                 self.set_state(State::ArrayNth);
                 Ok(self)
@@ -317,7 +318,7 @@ impl JsonBuilder {
             State::ArrayNth => {
                 self.buf.push(',');
                 self.buf.push('"');
-                base64::encode_config_buf(val, base64::STANDARD, &mut self.buf);
+                general_purpose::STANDARD.encode_string(val, &mut self.buf);
                 self.buf.push('"');
                 Ok(self)
             }
@@ -498,7 +499,7 @@ impl JsonBuilder {
         self.buf.push('"');
         self.buf.push_str(key);
         self.buf.push_str("\":\"");
-        base64::encode_config_buf(val, base64::STANDARD, &mut self.buf);
+        general_purpose::STANDARD.encode_string(val, &mut self.buf);
         self.buf.push('"');
 
         Ok(self)

@@ -23,6 +23,9 @@ use digest::Update;
 use md5::Md5;
 use std::ffi::CStr;
 use std::os::raw::c_uchar;
+use base64::engine::general_purpose;
+use std::io;
+use std::io::{Cursor, Read, Write};
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq, Eq)]
@@ -84,6 +87,25 @@ pub struct MimeStateSMTP<'a> {
     md5: md5::Md5,
     pub(crate) md5_state: MimeSmtpMd5State,
     pub(crate) md5_result: GenericArray<u8, U16>,
+    decoder: Option<MimeBase64Decoder<'a>>,
+}
+
+#[derive(Debug)]
+pub struct MimeBase64Decoder<'a> {
+    dec: base64::read::DecoderReader<'a, base64::engine::GeneralPurpose, MimeCursor>,
+}
+
+impl <'a> MimeBase64Decoder<'a> {
+    pub fn new() -> Option<MimeBase64Decoder<'a>> {
+        let r = MimeBase64Decoder {
+            dec: base64::read::DecoderReader::new(MimeCursor::new(), &general_purpose::STANDARD),
+        };
+        return Some(r);
+    }
+
+    fn get_mut(&mut self) -> &mut MimeCursor {
+        return self.dec.get_mut();
+    }
 }
 
 pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> {
@@ -97,6 +119,7 @@ pub fn mime_smtp_state_init(files: &mut FileContainer) -> Option<MimeStateSMTP> 
         boundary: Vec::new(),
         decoded_line: Vec::new(),
         encoding: MimeSmtpEncoding::Plain,
+        decoder: None,
         content_type: MimeSmtpContentType::Message,
         files,
         md5: Md5::new(),
@@ -173,6 +196,7 @@ fn mime_smtp_process_headers(ctx: &mut MimeStateSMTP) {
         } else if mime::rs_equals_lowercase(&h.name, b"content-transfer-encoding") {
             if mime::rs_equals_lowercase(&h.value, b"base64") {
                 ctx.encoding = MimeSmtpEncoding::Base64;
+                ctx.decoder = MimeBase64Decoder::new();
             } else if mime::rs_equals_lowercase(&h.value, b"quoted-printable") {
                 ctx.encoding = MimeSmtpEncoding::QuotedPrintable;
             }
@@ -322,6 +346,100 @@ fn mime_smtp_find_url_strings(ctx: &mut MimeStateSMTP, input_new: &[u8]) {
     } // else  no end of line, already buffered for next input...
 }
 
+//a cursor turning EOF into blocking errors
+#[derive(Debug)]
+pub struct MimeCursor {
+    pub cursor: Cursor<Vec<u8>>,
+}
+
+impl MimeCursor {
+    pub fn new() -> MimeCursor {
+        MimeCursor {
+            cursor: Cursor::new(Vec::new()),
+        }
+    }
+
+    pub fn set_position(&mut self, pos: u64) {
+        return self.cursor.set_position(pos);
+    }
+
+    pub fn clear(&mut self) {
+        self.cursor.get_mut().clear();
+        self.cursor.set_position(0);
+    }
+}
+
+// we need to implement this as flate2 and brotli crates
+// will read from this object
+impl Read for MimeCursor {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        //use the cursor, except it turns eof into blocking error
+        let r = self.cursor.read(buf);
+        match r {
+            Err(ref err) => {
+                if err.kind() == io::ErrorKind::UnexpectedEof {
+                    return Err(io::ErrorKind::WouldBlock.into());
+                }
+            }
+            Ok(0) => {
+                //regular EOF turned into blocking error
+                return Err(io::ErrorKind::WouldBlock.into());
+            }
+            Ok(_n) => {}
+        }
+        return r;
+    }
+}
+
+fn mime_base64_decode<'a>(decoder: &mut MimeBase64Decoder, input: &'a [u8], output: &'a mut Vec<u8>) -> io::Result<&'a [u8]> {
+    let mut start = 0;
+    for i in 0..input.len() {
+    if input[i] == b' '{
+    if i > start {
+    match decoder.get_mut().cursor.write_all(&input[start..i]) {
+        Ok(()) => {}
+        Err(e) => {
+            return Err(e);
+        }
+    }
+    }
+        start = i + 1;
+    }
+    }
+    if start < input.len() {
+        match decoder.get_mut().cursor.write_all(&input[start..]) {
+        Ok(()) => {}
+        Err(e) => {
+            return Err(e);
+        }
+    }
+}
+    let mut offset = 0;
+    decoder.get_mut().set_position(0);
+    output.resize(4096, 0);
+    loop {
+        match decoder.dec.read(&mut output[offset..]) {
+            Ok(0) => {
+                break;
+            }
+            Ok(n) => {
+                offset += n;
+                if offset == output.len() {
+                    output.resize(output.len() + 4096, 0);
+                }
+            }
+            Err(e) => {
+                if e.kind() == io::ErrorKind::WouldBlock {
+                    break;
+                }
+                return Err(e);
+            }
+        }
+    }
+    decoder.get_mut().clear();
+    return Ok(&output[..offset]);
+}
+
 fn mime_smtp_parse_line(
     ctx: &mut MimeStateSMTP, i: &[u8], full: &[u8],
 ) -> (MimeSmtpParserResult, u32) {
@@ -400,11 +518,21 @@ fn mime_smtp_parse_line(
                 }
                 MimeSmtpEncoding::Base64 => {
                     if unsafe { MIME_SMTP_CONFIG_DECODE_BASE64 } {
-                        if let Ok(dec) = base64::decode(i) {
+                        println!("lolt {}", i.len());
+                        if let Some(ref mut decoder) = &mut ctx.decoder {
+                        let mut output = Vec::with_capacity(4096);
+                        match mime_base64_decode(decoder, i, &mut output) {
+                        Ok(dec) => {
+                            println!("lolo {}", dec.len());
                             mime_smtp_find_url_strings(ctx, &dec);
                             unsafe {
                                 FileAppendData(ctx.files, dec.as_ptr(), dec.len() as u32);
                             }
+                        }
+                        Err(e) => {
+                            println!("lolf {} {:?}", e, i);
+                        }
+                        }
                         }
                         // else TODOrust5 set event ?
                     }
