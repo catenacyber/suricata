@@ -68,7 +68,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 
 size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t size, size_t MaxSize, unsigned int Seed)
 {
-    if (Seed & 1 == 0) {
+    if ((Seed & 1) == 0) {
         return LLVMFuzzerMutate(Data, size, MaxSize); // qsize
     }
     uint32_t crc = Seed >> 1;
