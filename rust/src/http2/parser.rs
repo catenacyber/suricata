@@ -228,7 +228,7 @@ pub fn http2_parse_headers_priority(i: &[u8]) -> IResult<&[u8], HTTP2FrameHeader
 
 pub const HTTP2_STATIC_HEADERS_NUMBER: usize = 61;
 
-fn http2_frame_header_static(n: u64, dyn_headers: &HTTP2DynTable) -> Option<HTTP2FrameHeaderBlock> {
+fn http2_frame_header_static(n: u64, dyn_headers: &HTTP2DynTable) -> HTTP2FrameHeaderBlock {
     let (name, value) = match n {
         1 => (":authority", ""),
         2 => (":method", "GET"),
@@ -294,28 +294,28 @@ fn http2_frame_header_static(n: u64, dyn_headers: &HTTP2DynTable) -> Option<HTTP
         _ => ("", ""),
     };
     if !name.is_empty() {
-        return Some(HTTP2FrameHeaderBlock {
+        return HTTP2FrameHeaderBlock {
             name: name.as_bytes().to_vec(),
             value: value.as_bytes().to_vec(),
             error: HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess,
             sizeupdate: 0,
-        });
+        };
     } else {
         //use dynamic table
         if n == 0 {
-            return Some(HTTP2FrameHeaderBlock {
+            return HTTP2FrameHeaderBlock {
                 name: Vec::new(),
                 value: Vec::new(),
                 error: HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeIndex0,
                 sizeupdate: 0,
-            });
+            };
         } else if dyn_headers.table.len() + HTTP2_STATIC_HEADERS_NUMBER < n as usize {
-            return Some(HTTP2FrameHeaderBlock {
+            return HTTP2FrameHeaderBlock {
                 name: Vec::new(),
                 value: Vec::new(),
                 error: HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeNotIndexed,
                 sizeupdate: 0,
-            });
+            };
         } else {
             let indyn = dyn_headers.table.len() - (n as usize - HTTP2_STATIC_HEADERS_NUMBER);
             let headcopy = HTTP2FrameHeaderBlock {
@@ -324,7 +324,7 @@ fn http2_frame_header_static(n: u64, dyn_headers: &HTTP2DynTable) -> Option<HTTP
                 error: HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess,
                 sizeupdate: 0,
             };
-            return Some(headcopy);
+            return headcopy;
         }
     }
 }
@@ -365,10 +365,8 @@ fn http2_parse_headers_block_indexed<'a>(
     }
     let (i2, indexed) = parser(input)?;
     let (i3, indexreal) = http2_parse_var_uint(i2, indexed.1 as u64, 0x7F)?;
-    match http2_frame_header_static(indexreal, dyn_headers) {
-        Some(h) => Ok((i3, h)),
-        _ => Err(Err::Error(make_error(i3, ErrorKind::MapOpt))),
-    }
+    let h = http2_frame_header_static(indexreal, dyn_headers);
+    return Ok((i3, h));
 }
 
 fn http2_parse_headers_block_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
@@ -395,18 +393,12 @@ fn http2_parse_headers_block_literal_common<'a>(
             Err(e) => Err(e),
         }
     } else {
-        match http2_frame_header_static(index, dyn_headers) {
-            Some(x) => Ok((
-                input,
-                x.name,
-                HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess,
-            )),
-            None => Ok((
-                input,
-                Vec::new(),
-                HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeNotIndexed,
-            )),
-        }
+        let x = http2_frame_header_static(index, dyn_headers);
+        Ok((
+            input,
+            x.name,
+            HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess,
+        ))
     }?;
     let (i4, value) = http2_parse_headers_block_string(i3)?;
     return Ok((
