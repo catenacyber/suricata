@@ -19,6 +19,7 @@ use super::http2::{
     HTTP2Event, HTTP2Frame, HTTP2FrameTypeData, HTTP2State, HTTP2Transaction, HTTP2TransactionState,
 };
 use super::parser;
+use super::parser::HTTP2FrameHeaderBlockNameVal;
 use crate::core::Direction;
 use crate::detect::uint::{detect_match_uint, DetectUintData};
 use std::ffi::CStr;
@@ -296,10 +297,10 @@ fn http2_detect_sizeupdate_match(
     blocks: &[parser::HTTP2FrameHeaderBlock], ctx: &DetectUintData<u64>,
 ) -> std::os::raw::c_int {
     for block in blocks.iter() {
-        if block.error == parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSizeUpdate
-            && detect_match_uint(ctx, block.sizeupdate)
-        {
-            return 1;
+        if let parser::HTTP2FrameHeaderBlock::SizeUpdate(x) = block {
+            if detect_match_uint(ctx, x.sizeupdate) {
+                return 1;
+            }
         }
     }
     return 0;
@@ -365,10 +366,18 @@ pub unsafe extern "C" fn rs_http2_tx_get_header_name(
             for i in 0..tx.frames_ts.len() {
                 if let Some(blocks) = http2_header_blocks(&tx.frames_ts[i]) {
                     if nb < pos + blocks.len() as u32 {
-                        let value = &blocks[(nb - pos) as usize].name;
-                        *buffer = value.as_ptr(); //unsafe
-                        *buffer_len = value.len() as u32;
-                        return 1;
+                        if let parser::HTTP2FrameHeaderBlock::NameVal(x) =
+                            &blocks[(nb - pos) as usize]
+                        {
+                            let value = &x.name;
+                            *buffer = value.as_ptr(); //unsafe
+                            *buffer_len = value.len() as u32;
+                            return 1;
+                        } else {
+                            *buffer = std::ptr::null_mut();
+                            *buffer_len = 0 as u32;
+                            return 1;
+                        }
                     } else {
                         pos += blocks.len() as u32;
                     }
@@ -379,10 +388,18 @@ pub unsafe extern "C" fn rs_http2_tx_get_header_name(
             for i in 0..tx.frames_tc.len() {
                 if let Some(blocks) = http2_header_blocks(&tx.frames_tc[i]) {
                     if nb < pos + blocks.len() as u32 {
-                        let value = &blocks[(nb - pos) as usize].name;
-                        *buffer = value.as_ptr(); //unsafe
-                        *buffer_len = value.len() as u32;
-                        return 1;
+                        if let parser::HTTP2FrameHeaderBlock::NameVal(x) =
+                            &blocks[(nb - pos) as usize]
+                        {
+                            let value = &x.name;
+                            *buffer = value.as_ptr(); //unsafe
+                            *buffer_len = value.len() as u32;
+                            return 1;
+                        } else {
+                            *buffer = std::ptr::null_mut();
+                            *buffer_len = 0 as u32;
+                            return 1;
+                        }
                     } else {
                         pos += blocks.len() as u32;
                     }
@@ -404,8 +421,10 @@ fn http2_frames_get_header_firstvalue<'a>(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                if block.name == name.as_bytes() {
-                    return Ok(&block.value);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    if x.name == name.as_bytes() {
+                        return Ok(&x.value);
+                    }
                 }
             }
         }
@@ -428,17 +447,19 @@ pub fn http2_frames_get_header_value_vec(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                if block.name == name.as_bytes() {
-                    if found == 0 {
-                        vec.extend_from_slice(&block.value);
-                        found = 1;
-                    } else if found == 1 {
-                        vec.extend_from_slice(&[b',', b' ']);
-                        vec.extend_from_slice(&block.value);
-                        found = 2;
-                    } else {
-                        vec.extend_from_slice(&[b',', b' ']);
-                        vec.extend_from_slice(&block.value);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    if x.name == name.as_bytes() {
+                        if found == 0 {
+                            vec.extend_from_slice(&x.value);
+                            found = 1;
+                        } else if found == 1 {
+                            vec.extend_from_slice(&[b',', b' ']);
+                            vec.extend_from_slice(&x.value);
+                            found = 2;
+                        } else {
+                            vec.extend_from_slice(&[b',', b' ']);
+                            vec.extend_from_slice(&x.value);
+                        }
                     }
                 }
             }
@@ -465,20 +486,22 @@ fn http2_frames_get_header_value<'a>(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                if block.name == name.as_bytes() {
-                    if found == 0 {
-                        single = Ok(&block.value);
-                        found = 1;
-                    } else if found == 1 {
-                        if let Ok(s) = single {
-                            vec.extend_from_slice(s);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    if x.name == name.as_bytes() {
+                        if found == 0 {
+                            single = Ok(&x.value);
+                            found = 1;
+                        } else if found == 1 {
+                            if let Ok(s) = single {
+                                vec.extend_from_slice(s);
+                            }
+                            vec.extend_from_slice(&[b',', b' ']);
+                            vec.extend_from_slice(&x.value);
+                            found = 2;
+                        } else {
+                            vec.extend_from_slice(&[b',', b' ']);
+                            vec.extend_from_slice(&x.value);
                         }
-                        vec.extend_from_slice(&[b',', b' ']);
-                        vec.extend_from_slice(&block.value);
-                        found = 2;
-                    } else {
-                        vec.extend_from_slice(&[b',', b' ']);
-                        vec.extend_from_slice(&block.value);
                     }
                 }
             }
@@ -537,7 +560,7 @@ fn http2_tx_get_resp_line(tx: &mut HTTP2Transaction) {
         return;
     }
     let empty = Vec::new();
-    let mut resp_line : Vec<u8> = Vec::new();
+    let mut resp_line: Vec<u8> = Vec::new();
 
     let status =
         if let Ok(value) = http2_frames_get_header_firstvalue(tx, Direction::ToClient, ":status") {
@@ -711,20 +734,20 @@ pub unsafe extern "C" fn rs_http2_tx_get_header_value(
     return 0;
 }
 
-fn http2_escape_header(blocks: &[parser::HTTP2FrameHeaderBlock], i: u32) -> Vec<u8> {
+fn http2_escape_header(block: &parser::HTTP2FrameHeaderBlockNameVal) -> Vec<u8> {
     //minimum size + 2 for escapes
-    let normalsize = blocks[i as usize].value.len() + 2 + blocks[i as usize].name.len() + 2;
+    let normalsize = block.value.len() + 2 + block.name.len() + 2;
     let mut vec = Vec::with_capacity(normalsize);
-    for j in 0..blocks[i as usize].name.len() {
-        vec.push(blocks[i as usize].name[j]);
-        if blocks[i as usize].name[j] == b':' {
+    for j in 0..block.name.len() {
+        vec.push(block.name[j]);
+        if block.name[j] == b':' {
             vec.push(b':');
         }
     }
     vec.extend_from_slice(&[b':', b' ']);
-    for j in 0..blocks[i as usize].value.len() {
-        vec.push(blocks[i as usize].value[j]);
-        if blocks[i as usize].value[j] == b':' {
+    for j in 0..block.value.len() {
+        vec.push(block.value[j]);
+        if block.value[j] == b':' {
             vec.push(b':');
         }
     }
@@ -744,9 +767,11 @@ pub unsafe extern "C" fn rs_http2_tx_get_header_names(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                // we do not escape linefeeds in headers names
-                vec.extend_from_slice(&block.name);
-                vec.extend_from_slice(&[b'\r', b'\n']);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    // we do not escape linefeeds in headers names
+                    vec.extend_from_slice(&x.name);
+                    vec.extend_from_slice(&[b'\r', b'\n']);
+                }
             }
         }
     }
@@ -808,12 +833,14 @@ pub unsafe extern "C" fn rs_http2_tx_get_headers(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                if !http2_header_iscookie(direction.into(), &block.name) {
-                    // we do not escape linefeeds nor : in headers names
-                    vec.extend_from_slice(&block.name);
-                    vec.extend_from_slice(&[b':', b' ']);
-                    vec.extend_from_slice(http2_header_trimspaces(&block.value));
-                    vec.extend_from_slice(&[b'\r', b'\n']);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    if !http2_header_iscookie(direction.into(), &x.name) {
+                        // we do not escape linefeeds nor : in headers names
+                        vec.extend_from_slice(&x.name);
+                        vec.extend_from_slice(&[b':', b' ']);
+                        vec.extend_from_slice(http2_header_trimspaces(&x.value));
+                        vec.extend_from_slice(&[b'\r', b'\n']);
+                    }
                 }
             }
         }
@@ -842,11 +869,13 @@ pub unsafe extern "C" fn rs_http2_tx_get_headers_raw(
     for frame in frames {
         if let Some(blocks) = http2_header_blocks(frame) {
             for block in blocks.iter() {
-                // we do not escape linefeeds nor : in headers names
-                vec.extend_from_slice(&block.name);
-                vec.extend_from_slice(&[b':', b' ']);
-                vec.extend_from_slice(&block.value);
-                vec.extend_from_slice(&[b'\r', b'\n']);
+                if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                    // we do not escape linefeeds nor : in headers names
+                    vec.extend_from_slice(&x.name);
+                    vec.extend_from_slice(&[b':', b' ']);
+                    vec.extend_from_slice(&x.value);
+                    vec.extend_from_slice(&[b'\r', b'\n']);
+                }
             }
         }
     }
@@ -871,13 +900,17 @@ pub unsafe extern "C" fn rs_http2_tx_get_header(
             for i in 0..tx.frames_ts.len() {
                 if let Some(blocks) = http2_header_blocks(&tx.frames_ts[i]) {
                     if nb < pos + blocks.len() as u32 {
-                        let ehdr = http2_escape_header(blocks, nb - pos);
-                        tx.escaped.push(ehdr);
-                        let idx = tx.escaped.len() - 1;
-                        let value = &tx.escaped[idx];
-                        *buffer = value.as_ptr(); //unsafe
-                        *buffer_len = value.len() as u32;
-                        return 1;
+                        if let parser::HTTP2FrameHeaderBlock::NameVal(x) =
+                            &blocks[(nb - pos) as usize]
+                        {
+                            let ehdr = http2_escape_header(x);
+                            tx.escaped.push(ehdr);
+                            let idx = tx.escaped.len() - 1;
+                            let value = &tx.escaped[idx];
+                            *buffer = value.as_ptr(); //unsafe
+                            *buffer_len = value.len() as u32;
+                            return 1;
+                        }
                     } else {
                         pos += blocks.len() as u32;
                     }
@@ -888,13 +921,17 @@ pub unsafe extern "C" fn rs_http2_tx_get_header(
             for i in 0..tx.frames_tc.len() {
                 if let Some(blocks) = http2_header_blocks(&tx.frames_tc[i]) {
                     if nb < pos + blocks.len() as u32 {
-                        let ehdr = http2_escape_header(blocks, nb - pos);
-                        tx.escaped.push(ehdr);
-                        let idx = tx.escaped.len() - 1;
-                        let value = &tx.escaped[idx];
-                        *buffer = value.as_ptr(); //unsafe
-                        *buffer_len = value.len() as u32;
-                        return 1;
+                        if let parser::HTTP2FrameHeaderBlock::NameVal(x) =
+                            &blocks[(nb - pos) as usize]
+                        {
+                            let ehdr = http2_escape_header(x);
+                            tx.escaped.push(ehdr);
+                            let idx = tx.escaped.len() - 1;
+                            let value = &tx.escaped[idx];
+                            *buffer = value.as_ptr(); //unsafe
+                            *buffer_len = value.len() as u32;
+                            return 1;
+                        }
                     } else {
                         pos += blocks.len() as u32;
                     }
@@ -914,12 +951,10 @@ fn http2_tx_set_header(state: &mut HTTP2State, name: &[u8], input: &[u8]) {
         stream_id: 1,
     };
     let mut blocks = Vec::new();
-    let b = parser::HTTP2FrameHeaderBlock {
+    let b = parser::HTTP2FrameHeaderBlock::NameVal(HTTP2FrameHeaderBlockNameVal {
         name: name.to_vec(),
         value: input.to_vec(),
-        error: parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess,
-        sizeupdate: 0,
-    };
+    });
     blocks.push(b);
     let hs = parser::HTTP2FrameHeaders {
         padlength: None,

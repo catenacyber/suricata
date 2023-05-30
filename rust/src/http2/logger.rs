@@ -37,39 +37,39 @@ fn log_http2_headers<'a>(
 ) -> Result<(), JsonError> {
     for block in blocks {
         js.start_object()?;
-        match block.error {
-            parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSuccess => {
-                js.set_string_from_bytes("name", &block.name)?;
-                js.set_string_from_bytes("value", &block.value)?;
-                if let Ok(name) = std::str::from_utf8(&block.name) {
+        match block {
+            parser::HTTP2FrameHeaderBlock::NameVal(x) => {
+                js.set_string_from_bytes("name", &x.name)?;
+                js.set_string_from_bytes("value", &x.value)?;
+                if let Ok(name) = std::str::from_utf8(&x.name) {
                     match name.to_lowercase().as_ref() {
                         ":method" => {
-                            common.insert(HeaderName::Method, &block.value);
+                            common.insert(HeaderName::Method, &x.value);
                         }
                         ":path" => {
-                            common.insert(HeaderName::Path, &block.value);
+                            common.insert(HeaderName::Path, &x.value);
                         }
                         ":status" => {
-                            common.insert(HeaderName::Status, &block.value);
+                            common.insert(HeaderName::Status, &x.value);
                         }
                         "user-agent" => {
-                            common.insert(HeaderName::UserAgent, &block.value);
+                            common.insert(HeaderName::UserAgent, &x.value);
                         }
                         "host" => {
-                            common.insert(HeaderName::Host, &block.value);
+                            common.insert(HeaderName::Host, &x.value);
                         }
                         "content-length" => {
-                            common.insert(HeaderName::ContentLength, &block.value);
+                            common.insert(HeaderName::ContentLength, &x.value);
                         }
                         _ => {}
                     }
                 }
             }
-            parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSizeUpdate => {
-                js.set_uint("table_size_update", block.sizeupdate)?;
+            parser::HTTP2FrameHeaderBlock::SizeUpdate(x) => {
+                js.set_uint("table_size_update", x.sizeupdate)?;
             }
-            _ => {
-                js.set_string("error", &block.error.to_string())?;
+            parser::HTTP2FrameHeaderBlock::Error(x) => {
+                js.set_string("error", &x.error.to_string())?;
             }
         }
         js.close()?;
@@ -112,7 +112,10 @@ fn log_http2_frames(frames: &[HTTP2Frame], js: &mut JsonBuilder) -> Result<bool,
             }
             for e in set {
                 js.start_object()?;
-                js.set_string("settings_id", &format!("SETTINGS{}", &e.id.to_string().to_uppercase()))?;
+                js.set_string(
+                    "settings_id",
+                    &format!("SETTINGS{}", &e.id.to_string().to_uppercase()),
+                )?;
                 js.set_uint("settings_value", e.value as u64)?;
                 js.close()?;
             }

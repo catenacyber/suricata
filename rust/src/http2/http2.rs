@@ -184,13 +184,13 @@ impl HTTP2Transaction {
                 if let Some(sfcm) = unsafe { SURICATA_HTTP2_FILE_CONFIG } {
                     //TODO get a file container instead of NULL
                     (c.HTPFileCloseHandleRange)(
-                            sfcm.files_sbcfg,
-                            std::ptr::null_mut(),
-                            0,
-                            self.file_range,
-                            std::ptr::null_mut(),
-                            0,
-                            );
+                        sfcm.files_sbcfg,
+                        std::ptr::null_mut(),
+                        0,
+                        self.file_range,
+                        std::ptr::null_mut(),
+                        0,
+                    );
                     (c.HttpRangeFreeBlock)(self.file_range);
                     self.file_range = std::ptr::null_mut();
                 }
@@ -204,19 +204,24 @@ impl HTTP2Transaction {
 
     fn handle_headers(&mut self, blocks: &[parser::HTTP2FrameHeaderBlock], dir: Direction) {
         for block in blocks {
-            if block.name == b"content-encoding" {
-                self.decoder.http2_encoding_fromvec(&block.value, dir);
+            if let parser::HTTP2FrameHeaderBlock::NameVal(x) = block {
+                if x.name == b"content-encoding" {
+                    self.decoder.http2_encoding_fromvec(&x.value, dir);
+                }
             }
         }
     }
 
     pub fn update_file_flags(&mut self, flow_file_flags: u16) {
-        self.ft_ts.file_flags = unsafe { FileFlowFlagsToFlags(flow_file_flags, STREAM_TOSERVER) | FILE_USE_DETECT };
-        self.ft_tc.file_flags = unsafe { FileFlowFlagsToFlags(flow_file_flags, STREAM_TOCLIENT) | FILE_USE_DETECT };
+        self.ft_ts.file_flags =
+            unsafe { FileFlowFlagsToFlags(flow_file_flags, STREAM_TOSERVER) | FILE_USE_DETECT };
+        self.ft_tc.file_flags =
+            unsafe { FileFlowFlagsToFlags(flow_file_flags, STREAM_TOCLIENT) | FILE_USE_DETECT };
     }
 
     fn decompress<'a>(
-        &'a mut self, input: &'a [u8], dir: Direction, sfcm: &'static SuricataFileContext, over: bool, flow: *const Flow,
+        &'a mut self, input: &'a [u8], dir: Direction, sfcm: &'static SuricataFileContext,
+        over: bool, flow: *const Flow,
     ) -> io::Result<()> {
         let mut output = Vec::with_capacity(decompression::HTTP2_DECOMPRESSION_CHUNK_SIZE);
         let decompressed = self.decoder.decompress(input, &mut output, dir)?;
@@ -235,7 +240,14 @@ impl HTTP2Transaction {
                 ) {
                     match range::http2_parse_check_content_range(&value) {
                         Ok((_, v)) => {
-                            range::http2_range_open(self, &v, flow, sfcm, Direction::ToClient, decompressed);
+                            range::http2_range_open(
+                                self,
+                                &v,
+                                flow,
+                                sfcm,
+                                Direction::ToClient,
+                                decompressed,
+                            );
                             if over && !self.file_range.is_null() {
                                 range::http2_range_close(self, Direction::ToClient, &[])
                             }
@@ -386,7 +398,7 @@ pub enum HTTP2Event {
 }
 
 pub struct HTTP2DynTable {
-    pub table: Vec<parser::HTTP2FrameHeaderBlock>,
+    pub table: Vec<parser::HTTP2FrameHeaderBlockNameVal>,
     pub current_size: usize,
     pub max_size: usize,
     pub overflow: u8,
@@ -566,7 +578,7 @@ impl HTTP2State {
         tx.state = HTTP2TransactionState::HTTP2StateGlobal;
         tx.tx_data.update_file_flags(self.state_data.file_flags);
         // TODO can this tx hold files?
-        tx.tx_data.file_tx = STREAM_TOSERVER|STREAM_TOCLIENT; // might hold files in both directions
+        tx.tx_data.file_tx = STREAM_TOSERVER | STREAM_TOCLIENT; // might hold files in both directions
         tx.update_file_flags(tx.tx_data.file_flags);
         self.transactions.push_back(tx);
         return self.transactions.back_mut().unwrap();
@@ -627,7 +639,7 @@ impl HTTP2State {
             }
             tx.tx_data.update_file_flags(self.state_data.file_flags);
             tx.update_file_flags(tx.tx_data.file_flags);
-            tx.tx_data.file_tx = STREAM_TOSERVER|STREAM_TOCLIENT; // might hold files in both directions
+            tx.tx_data.file_tx = STREAM_TOSERVER | STREAM_TOCLIENT; // might hold files in both directions
             self.transactions.push_back(tx);
             return self.transactions.back_mut().unwrap();
         }
@@ -636,19 +648,23 @@ impl HTTP2State {
     fn process_headers(&mut self, blocks: &Vec<parser::HTTP2FrameHeaderBlock>, dir: Direction) {
         let (mut update, mut sizeup) = (false, 0);
         for block in blocks {
-            if block.error >= parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeError {
-                self.set_event(HTTP2Event::InvalidHeader);
-            } else if block.error
-                == parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeSizeUpdate
-            {
-                update = true;
-                if block.sizeupdate > sizeup {
-                    sizeup = block.sizeupdate;
+            match block {
+                parser::HTTP2FrameHeaderBlock::Error(x) => {
+                    if x.error >= parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeError {
+                        self.set_event(HTTP2Event::InvalidHeader);
+                    } else if x.error
+                        == parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeIntegerOverflow
+                    {
+                        self.set_event(HTTP2Event::HeaderIntegerOverflow);
+                    }
                 }
-            } else if block.error
-                == parser::HTTP2HeaderDecodeStatus::HTTP2HeaderDecodeIntegerOverflow
-            {
-                self.set_event(HTTP2Event::HeaderIntegerOverflow);
+                parser::HTTP2FrameHeaderBlock::SizeUpdate(x) => {
+                    update = true;
+                    if x.sizeupdate > sizeup {
+                        sizeup = x.sizeupdate;
+                    }
+                }
+                parser::HTTP2FrameHeaderBlock::NameVal(_) => {}
             }
         }
         if update {
@@ -976,15 +992,10 @@ impl HTTP2State {
                                         tx_same.ft_ts.tx_id = tx_same.tx_id - 1;
                                     };
                                     let mut dinput = &rem[..hlsafe];
-                                    if padded && !rem.is_empty() && usize::from(rem[0]) < hlsafe{
+                                    if padded && !rem.is_empty() && usize::from(rem[0]) < hlsafe {
                                         dinput = &rem[1..hlsafe - usize::from(rem[0])];
                                     }
-                                    if tx_same.decompress(
-                                        dinput,
-                                        dir,
-                                        sfcm,
-                                        over,
-                                        flow).is_err() {
+                                    if tx_same.decompress(dinput, dir, sfcm, over, flow).is_err() {
                                         self.set_event(HTTP2Event::FailedDecompression);
                                     }
                                 }
@@ -1208,15 +1219,20 @@ pub unsafe extern "C" fn rs_http2_tx_get_alstate_progress(
 
 #[no_mangle]
 pub unsafe extern "C" fn rs_http2_getfiles(
-    _state: *mut std::os::raw::c_void,
-    tx: *mut std::os::raw::c_void, direction: u8,
+    _state: *mut std::os::raw::c_void, tx: *mut std::os::raw::c_void, direction: u8,
 ) -> AppLayerGetFileState {
     let tx = cast_pointer!(tx, HTTP2Transaction);
     if let Some(sfcm) = { SURICATA_HTTP2_FILE_CONFIG } {
         if direction & STREAM_TOSERVER != 0 {
-            return AppLayerGetFileState { fc: &mut tx.ft_ts.file, cfg: sfcm.files_sbcfg }
+            return AppLayerGetFileState {
+                fc: &mut tx.ft_ts.file,
+                cfg: sfcm.files_sbcfg,
+            };
         } else {
-            return AppLayerGetFileState { fc: &mut tx.ft_tc.file, cfg: sfcm.files_sbcfg }
+            return AppLayerGetFileState {
+                fc: &mut tx.ft_tc.file,
+                cfg: sfcm.files_sbcfg,
+            };
         }
     }
     AppLayerGetFileState::err()
