@@ -397,7 +397,7 @@ fn http2_parse_headers_block_literal_common<'a>(
         let x = http2_frame_header_static(index, dyn_headers);
         match x {
             HTTP2FrameHeaderBlock::NameVal(x2) => Ok((input, x2.name)),
-            _ => Err(Err::Error(make_error(input, ErrorKind::LengthValue))),
+            _ => Ok((input, Vec::new())),
         }
     }?;
     let (i4, value) = http2_parse_headers_block_string(i3)?;
