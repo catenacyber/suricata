@@ -160,7 +160,8 @@ Base64Ecode DecodeBase64(uint8_t *dest, uint32_t dest_size, const uint8_t *src, 
         }
     }
 
-    if (bbidx > 0 && bbidx < 4 && ((!valid && mode == BASE64_MODE_RFC4648))) {
+    if (bbidx > 0 && ((!valid && mode == BASE64_MODE_RFC4648))) {
+        DEBUG_VALIDATE_BUG_ON(bbidx >= B64_BLOCK);
         /* Decoded bytes for 1 or 2 base64 encoded bytes is 1 */
         padding = bbidx > 1 ? B64_BLOCK - bbidx : 2;
         uint32_t numDecoded_blk = ASCII_BLOCK - (padding < B64_BLOCK ? padding : ASCII_BLOCK);
@@ -172,7 +173,7 @@ Base64Ecode DecodeBase64(uint8_t *dest, uint32_t dest_size, const uint8_t *src, 
         /* if the destination size is not at least 3 Bytes long, it'll give a dynamic
          * buffer overflow while decoding, so, return and let the caller take care of the
          * remaining bytes to be decoded which should always be < 4 at this stage */
-        if (dest_size - *decoded_bytes < 3)
+        if (dest_size - *decoded_bytes < numDecoded_blk)
             return BASE64_ECODE_BUF;
         *decoded_bytes += numDecoded_blk;
         DecodeBase64Block(dptr, b64, numDecoded_blk);
@@ -208,11 +209,11 @@ Base64Ecode DecodeBase64(uint8_t *dest, uint32_t dest_size, const uint8_t *src, 
         FAIL_IF(consumed_bytes != exp_consumed);                                                   \
     }
 
-#define TEST_RFC4648(src, fin_str, dest_size, exp_decoded, exp_consumed, ecode)                    \
+#define TEST_RFC4648(src, fin_str,exp_decoded, exp_consumed, ecode)                    \
     {                                                                                              \
         uint32_t consumed_bytes = 0, num_decoded = 0;                                              \
-        uint8_t dst[dest_size];                                                                    \
-        Base64Ecode code = DecodeBase64(dst, dest_size, (const uint8_t *)src, strlen(src),         \
+        uint8_t dst[strlen(fin_str)];                                                                    \
+        Base64Ecode code = DecodeBase64(dst, strlen(fin_str), (const uint8_t *)src, strlen(src),         \
                 &consumed_bytes, &num_decoded, BASE64_MODE_RFC4648);                               \
         FAIL_IF(code != ecode);                                                                    \
         FAIL_IF(memcmp(dst, fin_str, strlen(fin_str)) != 0);                                       \
@@ -372,16 +373,16 @@ static int B64TestVectorsRFC4648(void)
     const char *src10 = "Y21Wd2IzSjBaVzFoYVd4bWNtRjFaRUJoZEc4dVoyOTJMbUYxOmpqcHh4b3Rhb2w%3D";
     const char *fin_str10 = "cmVwb3J0ZW1haWxmcmF1ZEBhdG8uZ292LmF1:jjpxxotaol";
 
-    TEST_RFC4648(src1, fin_str1, ASCII_BLOCK * 2, strlen(fin_str1), strlen(src1), BASE64_ECODE_OK);
-    TEST_RFC4648(src2, fin_str2, ASCII_BLOCK * 2, strlen(fin_str2), strlen(src2), BASE64_ECODE_OK);
-    TEST_RFC4648(src3, fin_str3, ASCII_BLOCK * 2, strlen(fin_str3), strlen(src3), BASE64_ECODE_OK);
-    TEST_RFC4648(src4, fin_str4, ASCII_BLOCK * 2, strlen(fin_str4), strlen(src4), BASE64_ECODE_OK);
-    TEST_RFC4648(src5, fin_str5, ASCII_BLOCK * 2, strlen(fin_str5), strlen(src5), BASE64_ECODE_OK);
-    TEST_RFC4648(src6, fin_str6, ASCII_BLOCK * 2, strlen(fin_str6), strlen(src6), BASE64_ECODE_OK);
-    TEST_RFC4648(src7, fin_str7, ASCII_BLOCK * 2, strlen(fin_str7), strlen(src7), BASE64_ECODE_OK);
-    TEST_RFC4648(src8, fin_str8, ASCII_BLOCK * 2, 1 /* f */, 2 /* Zm */, BASE64_ECODE_ERR);
-    TEST_RFC4648(src9, fin_str9, ASCII_BLOCK * 2, 1 /* f */, 2 /* Zm */, BASE64_ECODE_ERR);
-    TEST_RFC4648(src10, fin_str10, strlen(fin_str10) + 1, strlen(fin_str10), strlen(src10) - 3,
+    TEST_RFC4648(src1, fin_str1, strlen(fin_str1), strlen(src1), BASE64_ECODE_OK);
+    TEST_RFC4648(src2, fin_str2, strlen(fin_str2), strlen(src2), BASE64_ECODE_OK);
+    TEST_RFC4648(src3, fin_str3, strlen(fin_str3), strlen(src3), BASE64_ECODE_OK);
+    TEST_RFC4648(src4, fin_str4, strlen(fin_str4), strlen(src4), BASE64_ECODE_OK);
+    TEST_RFC4648(src5, fin_str5, strlen(fin_str5), strlen(src5), BASE64_ECODE_OK);
+    TEST_RFC4648(src6, fin_str6, strlen(fin_str6), strlen(src6), BASE64_ECODE_OK);
+    TEST_RFC4648(src7, fin_str7, strlen(fin_str7), strlen(src7), BASE64_ECODE_OK);
+    TEST_RFC4648(src8, fin_str8, 1 /* f */, 2 /* Zm */, BASE64_ECODE_ERR);
+    TEST_RFC4648(src9, fin_str9, 1 /* f */, 2 /* Zm */, BASE64_ECODE_ERR);
+    TEST_RFC4648(src10, fin_str10, strlen(fin_str10), strlen(src10) - 3,
             BASE64_ECODE_ERR);
     PASS;
 }
