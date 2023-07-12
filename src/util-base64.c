@@ -175,7 +175,7 @@ Base64Ecode DecodeBase64(uint8_t *dest, uint32_t dest_size, const uint8_t *src, 
         }
         *decoded_bytes += numDecoded_blk;
         DecodeBase64Block(dptr, b64, numDecoded_blk);
-        *consumed_bytes += bbidx;
+        *consumed_bytes += sp + bbidx;
     } else if (valid && bbidx > 0 && (mode != BASE64_MODE_RFC2045)) {
         /* Finish remaining b64 bytes by padding */
         /* Decode remaining */
@@ -188,7 +188,7 @@ Base64Ecode DecodeBase64(uint8_t *dest, uint32_t dest_size, const uint8_t *src, 
         }
         *decoded_bytes += numDecoded_blk;
         DecodeBase64Block(dptr, b64, numDecoded_blk);
-        *consumed_bytes += bbidx;
+        *consumed_bytes += sp + bbidx;
     }
 
     if (*decoded_bytes == 0) {
