@@ -361,6 +361,7 @@ enum DetectKeywordId {
 extern int DETECT_TBLSIZE;
 extern int DETECT_TBLSIZE_IDX;
 int SigTableList(const char *keyword);
+void SigTableCleanup(void);
 void SigTableSetup(void);
 void SigTableRegisterTests(void);
 

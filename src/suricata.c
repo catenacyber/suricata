@@ -392,6 +392,7 @@ void GlobalsDestroy(void)
     FeatureTrackingRelease();
     SCProtoNameRelease();
     TimeDeinit();
+    SigTableCleanup();
     TmqhCleanup();
     TmModuleRunDeInit();
     ParseSizeDeinit();

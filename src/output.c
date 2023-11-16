@@ -81,6 +81,7 @@
 #include "output-json-frame.h"
 #include "app-layer-parser.h"
 #include "output-filestore.h"
+#include "util-plugin.h"
 
 typedef struct RootLogger_ {
     OutputLogFunc LogFunc;
@@ -1107,6 +1108,22 @@ void OutputRegisterLoggers(void)
                 "eve-log.bittorrent-dht", OutputJsonLogInitSub, ALPROTO_BITTORRENT_DHT,
                 JsonGenericDirPacketLogger, JsonLogThreadInit, JsonLogThreadDeinit, NULL);
     }
+#ifdef ALPROTO_DYNAMIC_NB
+    for (size_t i = 0; i < ALPROTO_DYNAMIC_NB; i++) {
+        SCAppLayerPlugin *app_layer_plugin = SCPluginFindAppLayerByIndex(i);
+        if (app_layer_plugin == NULL) {
+            break;
+        }
+
+        OutputRegisterTxSubModule(LOGGER_JSON_TX, "eve-log", app_layer_plugin->logname,
+                app_layer_plugin->confname, OutputJsonLogInitSub,
+                (AppProto)(ALPROTO_MAX_STATIC + i), JsonGenericDirFlowLogger, JsonLogThreadInit,
+                JsonLogThreadDeinit, NULL);
+        SCLogNotice("%s JSON logger registered.", app_layer_plugin->name);
+        RegisterAppProtoAppLayerLogger((AppProto)(ALPROTO_MAX_STATIC + i),
+                (EveJsonSimpleTxLogFunc) app_layer_plugin->Logger);
+    }
+#endif
 }
 
 static EveJsonSimpleAppLayerLogger simple_json_applayer_loggers[ALPROTO_MAX] = {
@@ -1158,4 +1175,12 @@ EveJsonSimpleAppLayerLogger *SCEveJsonSimpleGetLogger(AppProto alproto)
         return &simple_json_applayer_loggers[alproto];
     }
     return NULL;
+}
+
+void RegisterAppProtoAppLayerLogger(AppProto alproto, EveJsonSimpleTxLogFunc log)
+{
+    if (alproto < ALPROTO_MAX) {
+        simple_json_applayer_loggers[alproto].proto = alproto;
+        simple_json_applayer_loggers[alproto].LogTx = log;
+    }
 }
