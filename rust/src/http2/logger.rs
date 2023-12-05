@@ -20,6 +20,7 @@ use super::parser;
 use crate::jsonbuilder::{JsonBuilder, JsonError};
 use std;
 use std::collections::HashMap;
+use crate::dns::log::{rs_dns_log_json_query, rs_dns_do_log_answer, rs_dns_log_json_answer};
 
 #[derive(Hash, PartialEq, Eq, Debug)]
 enum HeaderName {
@@ -265,6 +266,36 @@ fn log_http2(tx: &HTTP2Transaction, js: &mut JsonBuilder) -> Result<bool, JsonEr
     js.close()?; // http2
     js.close()?; // http
 
+    if tx.dns_request_tx.is_some() || tx.dns_response_tx.is_some() {
+        js.open_object("dns")?;
+        if let Some(dtx) = &tx.dns_request_tx {
+            let mark = js.get_mark();
+            let mut has_dns_query = false;
+            js.open_array("query")?;
+            for i in 0..0xFFFF {
+                let mut jsa = JsonBuilder::try_new_object()?;
+                if !rs_dns_log_json_query(&dtx, i, 0xF, &mut jsa) {
+                    break;
+                }
+                jsa.close()?;
+                js.append_object(&jsa)?;
+                has_dns_query = true;
+            }
+            if has_dns_query {
+                js.close()?; // query
+            } else {
+                js.restore_mark(&mark)?;
+            }
+        }
+        if let Some(dtx) = &tx.dns_response_tx {
+            if rs_dns_do_log_answer(dtx, 0xF) {
+                js.open_object("answer")?;
+                rs_dns_log_json_answer(&dtx, 0xF, js);
+                js.close()?; // answer
+            }
+        }
+        js.close()?; // dns
+    }
     return Ok(has_request || has_response || has_headers);
 }
 

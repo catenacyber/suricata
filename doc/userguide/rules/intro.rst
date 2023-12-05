@@ -87,6 +87,7 @@ you can pick from. These are:
 * http (either HTTP1 or HTTP2)
 * http1
 * http2
+* doh2
 * ftp
 * tls (this includes ssl)
 * smb

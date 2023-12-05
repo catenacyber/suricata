@@ -65,6 +65,7 @@ const AppProtoStringTuple AppProtoStrings[ALPROTO_MAX] = {
     { ALPROTO_HTTP2, "http2" },
     { ALPROTO_BITTORRENT_DHT, "bittorrent-dht" },
     { ALPROTO_HTTP, "http" },
+    { ALPROTO_DOH2, "doh2" },
     { ALPROTO_FAILED, "failed" },
 #ifdef UNITTESTS
     { ALPROTO_TEST, "test" },
