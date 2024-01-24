@@ -405,7 +405,8 @@ void HTPStateFree(void *state)
                 htp_tx_t *tx = HTPStateGetTx(s, tx_id);
                 if (tx != NULL) {
                     if (tx->flags & HTP_REQUEST_INVALID) {
-                        printf("lola %x:%d -> %x:d\n", s->f->src.addr_data32[0], s->f->sp, s->f->dst.addr_data32[0], s->f->dp);
+                        printf("lola %x:%d -> %x:d\n", s->f->src.addr_data32[0], s->f->sp,
+                                s->f->dst.addr_data32[0], s->f->dp);
                     }
                     HtpTxUserData *htud = (HtpTxUserData *) htp_tx_get_user_data(tx);
                     HtpTxUserDataFree(s, htud);
@@ -446,7 +447,8 @@ static void HTPStateTransactionFree(void *state, uint64_t id)
     htp_tx_t *tx = HTPStateGetTx(s, id);
     if (tx != NULL) {
         if (tx->flags & HTP_REQUEST_INVALID) {
-            printf("lolb %x:%d -> %x:d\n", s->f->src.addr_data32[0], s->f->sp, s->f->dst.addr_data32[0], s->f->dp);
+            printf("lolb %x:%d -> %x:d\n", s->f->src.addr_data32[0], s->f->sp,
+                    s->f->dst.addr_data32[0], s->f->dp);
         }
         /* This will remove obsolete body chunks */
         HtpTxUserData *htud = (HtpTxUserData *) htp_tx_get_user_data(tx);
