@@ -96,6 +96,21 @@ int DetectHelperKeywordRegister(const SCPluginSigTableElmt *kw)
     return -1;
 }
 
+int DetectHelperTransformRegister(const SCPluginTransformTableElmt *kw)
+{
+    if (DETECT_TBLSIZE_IDX < DETECT_TBLSIZE) {
+        sigmatch_table[DETECT_TBLSIZE_IDX].name = kw->name;
+        sigmatch_table[DETECT_TBLSIZE_IDX].desc = kw->desc;
+        sigmatch_table[DETECT_TBLSIZE_IDX].flags = kw->flags;
+        sigmatch_table[DETECT_TBLSIZE_IDX].Transform = kw->Transform;
+        sigmatch_table[DETECT_TBLSIZE_IDX].Setup = kw->Setup;
+        sigmatch_table[DETECT_TBLSIZE_IDX].Free = kw->Free;
+        DETECT_TBLSIZE_IDX++;
+        return DETECT_TBLSIZE_IDX - 1;
+    }
+    return -1;
+}
+
 int DetectHelperKeywordSetup(DetectEngineCtx *de_ctx, AppProto alproto, uint16_t kw_id, int buf_id,
         Signature *s, void *ctx)
 {
