@@ -67,4 +67,7 @@ InspectionBuffer *DetectHelperGetMultiData(struct DetectEngineThreadCtx_ *det_ct
         const DetectEngineTransforms *transforms, Flow *f, const uint8_t flow_flags, void *txv,
         const int list_id, uint32_t index, MultiGetTxBuffer GetBuf);
 
+uint8_t * InspectionBufferPtr(InspectionBuffer *buf);
+uint32_t InspectionBufferLength(InspectionBuffer *buf);
+
 #endif /* __DETECT_ENGINE_HELPER_H */
