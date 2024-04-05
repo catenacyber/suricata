@@ -42,6 +42,7 @@ int DetectHelperKeywordRegister(const SCPluginSigTableElmt *kw);
 int DetectHelperBufferRegister(const char *name, AppProto alproto, bool toclient, bool toserver);
 
 typedef bool (*SimpleGetTxBuffer)(void *, uint8_t, const uint8_t **, uint32_t *);
+typedef bool (*MultiGetTxBuffer)(void *, uint8_t, uint32_t, const uint8_t **, uint32_t *);
 
 int DetectHelperKeywordSetup(DetectEngineCtx *de_ctx, AppProto alproto, uint16_t kw_id, int buf_id,
         Signature *s, void *ctx);
@@ -50,5 +51,9 @@ InspectionBuffer *DetectHelperGetData(struct DetectEngineThreadCtx_ *det_ctx,
         const int list_id, SimpleGetTxBuffer GetBuf);
 int DetectHelperBufferMpmRegister(const char *name, const char *desc, AppProto alproto,
         bool toclient, bool toserver, InspectionBufferGetDataPtr GetData);
+
+InspectionBuffer *DetectHelperGetMultiData(struct DetectEngineThreadCtx_ *det_ctx,
+        const DetectEngineTransforms *transforms, Flow *f, const uint8_t flow_flags, void *txv,
+        const int list_id, uint32_t index, MultiGetTxBuffer GetBuf);
 
 #endif /* __DETECT_ENGINE_HELPER_H */

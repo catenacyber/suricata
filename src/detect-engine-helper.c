@@ -28,6 +28,7 @@
 #include "detect-engine-mpm.h"
 #include "detect-engine-prefilter.h"
 #include "detect-parse.h"
+#include "detect-engine-content-inspection.h"
 
 int DetectHelperBufferRegister(const char *name, AppProto alproto, bool toclient, bool toserver)
 {
@@ -107,4 +108,29 @@ int DetectHelperKeywordSetup(DetectEngineCtx *de_ctx, AppProto alproto, uint16_t
         return -1;
     }
     return 0;
+}
+
+InspectionBuffer *DetectHelperGetMultiData(struct DetectEngineThreadCtx_ *det_ctx,
+        const DetectEngineTransforms *transforms, Flow *f, const uint8_t flow_flags, void *txv,
+        const int list_id, uint32_t index,
+        bool (*GetBuf)(void *txv, const uint8_t flow_flags, uint32_t index, const uint8_t **buf, uint32_t *buf_len))
+{
+    InspectionBuffer *buffer = InspectionBufferMultipleForListGet(det_ctx, list_id, index);
+    if (buffer == NULL) {
+        return NULL;
+    }
+    if (buffer->initialized) {
+        return buffer;
+    }
+
+    const uint8_t *data = NULL;
+    uint32_t data_len = 0;
+
+    if (!GetBuf(txv, flow_flags, index, &data, &data_len)) {
+        InspectionBufferSetupMultiEmpty(buffer);
+        return NULL;
+    }
+    InspectionBufferSetupMulti(buffer, transforms, data, data_len);
+    buffer->flags = DETECT_CI_FLAGS_SINGLE;
+    return buffer;
 }
