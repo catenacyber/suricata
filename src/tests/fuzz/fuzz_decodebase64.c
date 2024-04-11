@@ -20,6 +20,7 @@ static void Base64FuzzTest(const uint8_t *src, size_t len, size_t dest_size)
         uint32_t decoded_bytes = 0;
 
         DecodeBase64(dest, dest_size, src, len, &consumed_bytes, &decoded_bytes, mode);
+        free(dest);
     }
 }
 
