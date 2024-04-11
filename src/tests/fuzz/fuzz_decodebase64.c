@@ -23,10 +23,6 @@ static void Base64FuzzTest(const uint8_t *src, size_t len, size_t dest_size)
     }
 }
 
-#define BIT_SHIFT_SIZE 24
-#define BLK_SIZE       4
-#define BYTE_SIZE      8
-
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     if (initialized == 0) {
@@ -39,21 +35,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         initialized = 1;
     }
 
-    uint8_t shift = 0;
-    uint32_t dest_size = 0;
-    if (size > BLK_SIZE)
-        shift = BIT_SHIFT_SIZE;
-    else
-        shift = BYTE_SIZE * (uint8_t)(size - 1);
+    if (size < 2)
+        return 0;
 
-    for (size_t i = 0; i < size; i++) {
-        if (i == BLK_SIZE)
-            break;
-        dest_size |= (uint32_t)(data[i] << shift);
-        shift -= BYTE_SIZE;
-    }
+    uint32_t dest_size = (uint32_t)(data[0] << 8) | (uint32_t)(data[1]);
 
-    Base64FuzzTest(data, size, dest_size);
+    Base64FuzzTest(data + 2, size - 2, dest_size);
 
     return 0;
 }
