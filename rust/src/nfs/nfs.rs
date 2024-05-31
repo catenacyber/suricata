@@ -431,6 +431,7 @@ impl NFSState {
             // set at least one another transaction to the drop state
             for tx_old in &mut self.transactions {
                 if !tx_old.request_done || !tx_old.response_done {
+                    tx_old.tx_data.processed_until_update = false;
                     tx_old.request_done = true;
                     tx_old.response_done = true;
                     tx_old.is_file_closed = true;
@@ -484,6 +485,7 @@ impl NFSState {
     pub fn mark_response_tx_done(&mut self, xid: u32, rpc_status: u32, nfs_status: u32, resp_handle: &[u8])
     {
         if let Some(mytx) = self.get_tx_by_xid(xid) {
+            mytx.tx_data.processed_until_update = false;
             mytx.response_done = true;
             mytx.rpc_response_status = rpc_status;
             mytx.nfs_response_status = nfs_status;

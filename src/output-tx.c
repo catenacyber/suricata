@@ -413,15 +413,6 @@ static TmEcode OutputTxLog(ThreadVars *tv, Packet *p, void *thread_data)
         tx_id = ires.tx_id;
         SCLogDebug("STARTING tx_id %" PRIu64 ", tx %p", tx_id, tx);
 
-        const int tx_progress_ts =
-                AppLayerParserGetStateProgress(ipproto, alproto, tx, ts_disrupt_flags);
-        const int tx_progress_tc =
-                AppLayerParserGetStateProgress(ipproto, alproto, tx, tc_disrupt_flags);
-        const bool tx_complete = (tx_progress_ts == complete_ts && tx_progress_tc == complete_tc);
-
-        SCLogDebug("file_thread_data %p filedata_thread_data %p", op_thread_data->file,
-                op_thread_data->filedata);
-
         AppLayerTxData *txd = AppLayerParserGetTxData(ipproto, alproto, tx);
         if (unlikely(txd == NULL)) {
             SCLogDebug("NO TXD");
@@ -430,6 +421,15 @@ static TmEcode OutputTxLog(ThreadVars *tv, Packet *p, void *thread_data)
             max_id = tx_id;
             goto next_tx;
         }
+
+        const int tx_progress_ts =
+                AppLayerParserGetStateProgress(ipproto, alproto, tx, ts_disrupt_flags);
+        const int tx_progress_tc =
+                AppLayerParserGetStateProgress(ipproto, alproto, tx, tc_disrupt_flags);
+        const bool tx_complete = (tx_progress_ts == complete_ts && tx_progress_tc == complete_tc);
+
+        SCLogDebug("file_thread_data %p filedata_thread_data %p", op_thread_data->file,
+                op_thread_data->filedata);
 
         if (file_logging_active) {
             if (AppLayerParserIsFileTx(txd)) { // need to process each tx that might be a file tx,
@@ -465,6 +465,9 @@ static TmEcode OutputTxLog(ThreadVars *tv, Packet *p, void *thread_data)
             }
         }
         SCLogDebug("logger: expect %08x, have %08x", logger_expectation, txd->logged.flags);
+        if (txd->processed_until_update && !tx_complete && !eof) {
+            goto next_tx;
+        }
 
         if (list[ALPROTO_UNKNOWN] != 0) {
             OutputTxLogList0(tv, op_thread_data, p, f, tx, tx_id);
