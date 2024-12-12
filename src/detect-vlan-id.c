@@ -22,7 +22,6 @@
 #include "detect-engine-prefilter.h"
 #include "detect-engine-uint.h"
 #include "detect-parse.h"
-#include "util-byte.h"
 
 static int DetectVlanIdMatch(
         DetectEngineThreadCtx *det_ctx, Packet *p, const Signature *s, const SigMatchCtx *ctx)
