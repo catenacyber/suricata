@@ -33,8 +33,7 @@ static int DetectVlanIdMatch(
 
     const DetectVlanIdData *vdata = (const DetectVlanIdData *)ctx;
     for (int i = 0; i < p->vlan_idx; i++) {
-        if (p->vlan_id[i] == vdata->id && (vdata->layer == 0 || vdata->layer - 1 == i))
-        {
+        if (p->vlan_id[i] == vdata->id && (vdata->layer == 0 || vdata->layer - 1 == i)) {
             return 1;
         }
     }
