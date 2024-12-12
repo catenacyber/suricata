@@ -32,12 +32,25 @@ static int DetectVlanIdMatch(
     }
 
     const DetectVlanIdData *vdata = (const DetectVlanIdData *)ctx;
-    for (int i = 0; i < p->vlan_idx; i++) {
-        if (p->vlan_id[i] == vdata->id && (vdata->layer == 0 || vdata->layer - 1 == i)) {
-            return 1;
+    if (vdata->layer == INT8_MIN) {
+        for (int i = 0; i < p->vlan_idx; i++) {
+            if (DetectU16Match(p->vlan_id[i], &vdata->du16)) {
+                return 1;
+            }
+        }
+    } else {
+        if (vdata->layer < 0) {
+            if (((int16_t) p->vlan_idx) + vdata->layer < 0) {
+                return 0;
+            }
+            return DetectU16Match(p->vlan_id[p->vlan_idx + vdata->layer], &vdata->du16);
+        } else {
+            if (p->vlan_idx < vdata->layer) {
+                return 0;
+            }
+            return DetectU16Match(p->vlan_id[vdata->layer], &vdata->du16);
         }
     }
-
     return 0;
 }
 
@@ -50,7 +63,6 @@ static void DetectVlanIdFree(DetectEngineCtx *de_ctx, void *ptr)
 static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 {
     DetectVlanIdData *vdata = rs_detect_vlan_id_parse(rawstr);
-    SCLogInfo("vdata->id = [%i]", vdata->id);
     SCLogInfo("vdata->layer = [%i]", vdata->layer);
     if (vdata == NULL) {
         SCLogError("vlan id invalid %s", rawstr);
@@ -67,6 +79,7 @@ static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *
     return 0;
 }
 
+/* TODO
 static void PrefilterPacketVlanIdMatch(DetectEngineThreadCtx *det_ctx, Packet *p, const void *pectx)
 {
     const PrefilterPacketHeaderCtx *ctx = pectx;
@@ -102,7 +115,8 @@ static bool PrefilterVlanIdIsPrefilterable(const Signature *s)
 {
     return PrefilterIsPrefilterableById(s, DETECT_VLAN_ID);
 }
-
+*/
+                
 void DetectVlanIdRegister(void)
 {
     sigmatch_table[DETECT_VLAN_ID].name = "vlan.id";
@@ -111,6 +125,6 @@ void DetectVlanIdRegister(void)
     sigmatch_table[DETECT_VLAN_ID].Match = DetectVlanIdMatch;
     sigmatch_table[DETECT_VLAN_ID].Setup = DetectVlanIdSetup;
     sigmatch_table[DETECT_VLAN_ID].Free = DetectVlanIdFree;
-    sigmatch_table[DETECT_VLAN_ID].SupportsPrefilter = PrefilterVlanIdIsPrefilterable;
-    sigmatch_table[DETECT_VLAN_ID].SetupPrefilter = PrefilterSetupVlanId;
+    /* TODO sigmatch_table[DETECT_VLAN_ID].SupportsPrefilter = PrefilterVlanIdIsPrefilterable;
+    sigmatch_table[DETECT_VLAN_ID].SetupPrefilter = PrefilterSetupVlanId;*/
 }

@@ -15,40 +15,44 @@
  * 02110-1301, USA.
  */
 
+use super::uint::{detect_parse_uint, DetectUintData};
 use std::ffi::CStr;
 use std::str::FromStr;
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
 pub struct DetectVlanIdData {
-    pub id: u16,
-    pub layer: u8,
+    pub du16: DetectUintData<u16>,
+    pub layer: i8,
 }
 
 pub fn detect_parse_vlan_id(s: &str) -> Option<DetectVlanIdData> {
     let parts: Vec<&str> = s.split(',').collect();
-    let id = u16::from_str(parts[0]);
-    if id.is_err() {
+    let du16 = detect_parse_uint(parts[0]);
+    if du16.is_err() {
         return None;
     }
-    let id = id.unwrap();
+    let du16 = du16.unwrap().1;
     if parts.len() > 2 {
         return None;
     }
-    if id >= 0xFFF {
+    if du16.arg1 >= 0xFFF {
         // vlan id is encoded on 12 bits
         return None;
     }
     let layer = if parts.len() == 2 {
-        u8::from_str(parts[1])
+        i8::from_str(parts[1])
     } else {
-        Ok(0)
+        Ok(i8::MIN)
     };
     if layer.is_err() {
         return None;
     }
     let layer = layer.unwrap();
-    return Some(DetectVlanIdData { id, layer });
+    if parts.len() == 2 && (layer < -3 || layer > 2) {
+        return None;
+    }
+    return Some(DetectVlanIdData { du16, layer });
 }
 
 #[no_mangle]
@@ -73,14 +77,21 @@ mod test {
     fn test_detect_parse_vlan_id() {
         assert_eq!(
             detect_parse_vlan_id("300").unwrap(),
-            DetectVlanIdData { id: 300, layer: 0 }
+            DetectVlanIdData {
+                du16: 300,
+                layer: 0
+            }
         );
         assert_eq!(
             detect_parse_vlan_id("200,1").unwrap(),
-            DetectVlanIdData { id: 200, layer: 1 }
+            DetectVlanIdData {
+                du16: 200,
+                layer: 1
+            }
         );
         assert!(detect_parse_vlan_id("200abc").is_none());
         assert!(detect_parse_vlan_id("4096").is_none());
         assert!(detect_parse_vlan_id("600,abc").is_none());
+        assert!(detect_parse_vlan_id("600,100").is_none());
     }
 }
