@@ -24,14 +24,6 @@
 #include "detect-parse.h"
 #include "util-byte.h"
 
-#ifdef UNITTESTS
-static void DetectVlanIdRegisterTests(void);
-#endif
-
-#define PARSE_REGEX "^([0-9]+)(?:,\\s*([0-9]|any))?$"
-
-static DetectParseRegex parse_regex;
-
 static int DetectVlanIdMatch(
         DetectEngineThreadCtx *det_ctx, Packet *p, const Signature *s, const SigMatchCtx *ctx)
 {
@@ -56,77 +48,8 @@ static void DetectVlanIdFree(DetectEngineCtx *de_ctx, void *ptr)
     SCFree(data);
 }
 
-static DetectVlanIdData *DetectVlanIdParse(DetectEngineCtx *de_ctx, const char *rawstr)
-{
-    DetectVlanIdData *vdata = NULL;
-    int res = 0;
-    size_t pcre2_len;
-    pcre2_match_data *match = NULL;
-
-    int count = DetectParsePcreExec(&parse_regex, &match, rawstr, 0, 0);
-    if (count != 2 && count != 3) {
-        SCLogError("\"%s\" is not a valid setting for vlan-id.", rawstr);
-        goto error;
-    }
-
-    const char *str_ptr;
-    res = SC_Pcre2SubstringGet(match, 1, (PCRE2_UCHAR8 **)&str_ptr, &pcre2_len);
-    if (res < 0) {
-        SCLogError("pcre2_substring_get_bynumber failed");
-        goto error;
-    }
-
-    vdata = SCMalloc(sizeof(DetectVlanIdData));
-    if (unlikely(vdata == NULL))
-        goto error;
-
-    if (StringParseUint16(&vdata->id, 10, 0, str_ptr) < 0) {
-        SCLogError("specified vlan id %s is not valid", str_ptr);
-        goto error;
-    }
-    vdata->layer = 0;
-
-    if (count == 3) {
-        res = SC_Pcre2SubstringGet(match, 2, (PCRE2_UCHAR8 **)&str_ptr, &pcre2_len);
-        if (res < 0) {
-            SCLogError("pcre2_substring_get_bynumber failed");
-            goto error;
-        }
-
-        if (strcasecmp(str_ptr, "any") != 0) {
-            if (StringParseUint8(&vdata->layer, 10, 0, str_ptr) < 0) {
-                SCLogError("specified vlan layer %s is not valid", str_ptr);
-                goto error;
-            }
-        }
-    }
-
-    if (vdata->layer > VLAN_MAX_LAYERS) {
-        SCLogError("specified vlan layer %s is not valid", str_ptr);
-        goto error;
-    }
-
-    if (vdata->id == 0 || vdata->id >= 4095) {
-        SCLogError("specified vlan id %s is not valid. Valid range 1-4094", str_ptr);
-        goto error;
-    }
-
-    pcre2_match_data_free(match);
-    return vdata;
-
-error:
-    if (match) {
-        pcre2_match_data_free(match);
-    }
-    if (vdata != NULL) {
-        DetectVlanIdFree(de_ctx, vdata);
-    }
-    return NULL;
-}
-
 static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 {
-    //DetectVlanIdData *vdata = DetectVlanIdParse(de_ctx, rawstr);
     DetectVlanIdData *vdata = rs_detect_vlan_id_parse(rawstr);
     SCLogInfo("vdata->id = [%i]", vdata->id);
     SCLogInfo("vdata->layer = [%i]", vdata->layer);
@@ -189,95 +112,6 @@ void DetectVlanIdRegister(void)
     sigmatch_table[DETECT_VLAN_ID].Match = DetectVlanIdMatch;
     sigmatch_table[DETECT_VLAN_ID].Setup = DetectVlanIdSetup;
     sigmatch_table[DETECT_VLAN_ID].Free = DetectVlanIdFree;
-#ifdef UNITTESTS
-    sigmatch_table[DETECT_VLAN_ID].RegisterTests = DetectVlanIdRegisterTests;
-#endif
     sigmatch_table[DETECT_VLAN_ID].SupportsPrefilter = PrefilterVlanIdIsPrefilterable;
     sigmatch_table[DETECT_VLAN_ID].SetupPrefilter = PrefilterSetupVlanId;
-    DetectSetupParseRegexes(PARSE_REGEX, &parse_regex);
 }
-
-#ifdef UNITTESTS
-#include "detect-engine.h"
-#include "detect-engine-mpm.h"
-
-/**
- * \test DetectVlanIdParseTest01 is a test for setting a valid vlan id value
- */
-static int DetectVlanIdParseTest01(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "300");
-    FAIL_IF_NULL(vdata);
-    FAIL_IF_NOT(vdata->id == 300);
-    DetectVlanIdFree(NULL, vdata);
-    PASS;
-}
-
-/**
- * \test DetectVlanIdParseTest02 is a test for setting a valid vlan id value and a specific vlan
- * layer
- */
-static int DetectVlanIdParseTest02(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "200,1");
-    FAIL_IF_NULL(vdata);
-    FAIL_IF_NOT(vdata->id == 200);
-    FAIL_IF_NOT(vdata->layer == 1);
-    DetectVlanIdFree(NULL, vdata);
-    PASS;
-}
-
-/**
- * \test DetectVlanIdParseTest03 is a test for setting a valid vlan id value and explicit "any" vlan
- * layer
- */
-static int DetectVlanIdParseTest03(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "200,any");
-    FAIL_IF_NULL(vdata);
-    FAIL_IF_NOT(vdata->id == 200);
-    FAIL_IF_NOT(vdata->layer == 0);
-    DetectVlanIdFree(NULL, vdata);
-    PASS;
-}
-
-/**
- * \test DetectVlanIdParseTest04 is a test for setting a invalid vlan id value
- */
-static int DetectVlanIdParseTest04(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "200abc");
-    FAIL_IF_NOT_NULL(vdata);
-    PASS;
-}
-
-/**
- * \test DetectVlanIdParseTest05 is a test for setting a invalid vlan id value that is out of range
- */
-static int DetectVlanIdParseTest05(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "4096");
-    FAIL_IF_NOT_NULL(vdata);
-    PASS;
-}
-
-/**
- * \test DetectVlanIdParseTest06 is a test for setting a invalid vlan layer
- */
-static int DetectVlanIdParseTest06(void)
-{
-    DetectVlanIdData *vdata = DetectVlanIdParse(NULL, "600,abc");
-    FAIL_IF_NOT_NULL(vdata);
-    PASS;
-}
-
-static void DetectVlanIdRegisterTests(void)
-{
-    UtRegisterTest("DetectVlanIdParseTest01", DetectVlanIdParseTest01);
-    UtRegisterTest("DetectVlanIdParseTest02", DetectVlanIdParseTest02);
-    UtRegisterTest("DetectVlanIdParseTest03", DetectVlanIdParseTest03);
-    UtRegisterTest("DetectVlanIdParseTest04", DetectVlanIdParseTest04);
-    UtRegisterTest("DetectVlanIdParseTest05", DetectVlanIdParseTest05);
-    UtRegisterTest("DetectVlanIdParseTest06", DetectVlanIdParseTest06);
-}
-#endif /* UNITTESTS */

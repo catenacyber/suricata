@@ -15,13 +15,14 @@
  * 02110-1301, USA.
  */
 
- use std::ffi::CStr;
- use std::str::FromStr;
+use std::ffi::CStr;
+use std::str::FromStr;
 
 #[repr(C)]
+#[derive(Debug, PartialEq)]
 pub struct DetectVlanIdData {
     pub id: u16,
-    pub layer:u8,
+    pub layer: u8,
 }
 
 pub fn detect_parse_vlan_id(s: &str) -> Option<DetectVlanIdData> {
@@ -34,8 +35,12 @@ pub fn detect_parse_vlan_id(s: &str) -> Option<DetectVlanIdData> {
     if parts.len() > 2 {
         return None;
     }
+    if id >= 0xFFF {
+        // vlan id is encoded on 12 bits
+        return None;
+    }
     let layer = if parts.len() == 2 {
-         u8::from_str(parts[1])
+        u8::from_str(parts[1])
     } else {
         Ok(0)
     };
@@ -60,3 +65,22 @@ pub unsafe extern "C" fn rs_detect_vlan_id_parse(
     return std::ptr::null_mut();
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_detect_parse_vlan_id() {
+        assert_eq!(
+            detect_parse_vlan_id("300").unwrap(),
+            DetectVlanIdData { id: 300, layer: 0 }
+        );
+        assert_eq!(
+            detect_parse_vlan_id("200,1").unwrap(),
+            DetectVlanIdData { id: 200, layer: 1 }
+        );
+        assert!(detect_parse_vlan_id("200abc").is_none());
+        assert!(detect_parse_vlan_id("4096").is_none());
+        assert!(detect_parse_vlan_id("600,abc").is_none());
+    }
+}
