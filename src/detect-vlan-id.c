@@ -40,7 +40,7 @@ static int DetectVlanIdMatch(
         }
     } else {
         if (vdata->layer < 0) {
-            if (((int16_t) p->vlan_idx) + vdata->layer < 0) {
+            if (((int16_t)p->vlan_idx) + vdata->layer < 0) {
                 return 0;
             }
             return DetectU16Match(p->vlan_id[p->vlan_idx + vdata->layer], &vdata->du16);
@@ -116,7 +116,7 @@ static bool PrefilterVlanIdIsPrefilterable(const Signature *s)
     return PrefilterIsPrefilterableById(s, DETECT_VLAN_ID);
 }
 */
-                
+
 void DetectVlanIdRegister(void)
 {
     sigmatch_table[DETECT_VLAN_ID].name = "vlan.id";
