@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Open Information Security Foundation
+/* Copyright (C) 2024 Open Information Security Foundation
  *
  * You can copy, redistribute or modify this Program under the terms of
  * the GNU General Public License version 2 as published by the Free
@@ -41,8 +41,10 @@ static int DetectVlanIdMatch(
 
     const DetectVlanIdData *vdata = (const DetectVlanIdData *)ctx;
     for (int i = 0; i < p->vlan_idx; i++) {
-        if (p->vlan_id[i] == vdata->id && (vdata->layer == ANY || vdata->layer - 1 == i))
+        if (p->vlan_id[i] == vdata->id && (vdata->layer == 0 || vdata->layer - 1 == i))
+        {
             return 1;
+        }
     }
 
     return 0;
@@ -82,7 +84,7 @@ static DetectVlanIdData *DetectVlanIdParse(DetectEngineCtx *de_ctx, const char *
         SCLogError("specified vlan id %s is not valid", str_ptr);
         goto error;
     }
-    vdata->layer = ANY;
+    vdata->layer = 0;
 
     if (count == 3) {
         res = SC_Pcre2SubstringGet(match, 2, (PCRE2_UCHAR8 **)&str_ptr, &pcre2_len);
@@ -124,7 +126,8 @@ error:
 
 static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 {
-    DetectVlanIdData *vdata = DetectVlanIdParse(de_ctx, rawstr);
+    //DetectVlanIdData *vdata = DetectVlanIdParse(de_ctx, rawstr);
+    DetectVlanIdData *vdata = rs_detect_vlan_id_parse();
     if (vdata == NULL)
         return -1;
 
@@ -143,7 +146,7 @@ static void PrefilterPacketVlanIdMatch(DetectEngineThreadCtx *det_ctx, Packet *p
     const PrefilterPacketHeaderCtx *ctx = pectx;
 
     for (int i = 0; i < p->vlan_idx; i++) {
-        if (p->vlan_id[i] == ctx->v1.u16[0] && (ctx->v1.u8[0] == ANY || ctx->v1.u8[0] - 1 == i))
+        if (p->vlan_id[i] == ctx->v1.u16[0] && (ctx->v1.u8[0] == 0 || ctx->v1.u8[0] - 1 == i))
             PrefilterAddSids(&det_ctx->pmq, ctx->sigs_array, ctx->sigs_cnt);
     }
 }

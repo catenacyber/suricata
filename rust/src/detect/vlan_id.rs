@@ -15,14 +15,19 @@
  * 02110-1301, USA.
  */
 
-#ifndef SURICATA_DETECT_VLAN_ID_H
-#define SURICATA_DETECT_VLAN_ID_H
+#[repr(C)]
+pub struct DetectVlanIdData {
+    pub id: u16,
+    pub layer:u8,
+}
 
-// typedef struct DetectVlanIdData_ {
-//     uint16_t id;   /* id to match */
-//     uint8_t layer; /* id layer to match */
-// } DetectVlanIdData;
+#[no_mangle]
+pub unsafe extern "C" fn rs_detect_vlan_id_parse() -> *mut DetectVlanIdData {
+    let data = DetectVlanIdData {
+        id: 400,
+        layer: 3,
+    };
+    let boxed = Box::new(data);
+    Box::into_raw(boxed)
+}
 
-void DetectVlanIdRegister(void);
-
-#endif /* SURICATA_DETECT_VLAN_ID_H */
