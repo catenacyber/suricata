@@ -130,8 +130,10 @@ static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *
     DetectVlanIdData *vdata = rs_detect_vlan_id_parse(rawstr);
     SCLogInfo("vdata->id = [%i]", vdata->id);
     SCLogInfo("vdata->layer = [%i]", vdata->layer);
-    if (vdata == NULL)
+    if (vdata == NULL) {
+        SCLogError("vlan id invalid %s", rawstr);
         return -1;
+    }
 
     if (SigMatchAppendSMToList(
                 de_ctx, s, DETECT_VLAN_ID, (SigMatchCtx *)vdata, DETECT_SM_LIST_MATCH) == NULL) {
@@ -183,7 +185,7 @@ void DetectVlanIdRegister(void)
 {
     sigmatch_table[DETECT_VLAN_ID].name = "vlan.id";
     sigmatch_table[DETECT_VLAN_ID].desc = "match vlan id";
-    sigmatch_table[DETECT_VLAN_ID].url = "/rules/vlan-id-keyword.html";
+    sigmatch_table[DETECT_VLAN_ID].url = "/rules/vlan-id.html";
     sigmatch_table[DETECT_VLAN_ID].Match = DetectVlanIdMatch;
     sigmatch_table[DETECT_VLAN_ID].Setup = DetectVlanIdSetup;
     sigmatch_table[DETECT_VLAN_ID].Free = DetectVlanIdFree;

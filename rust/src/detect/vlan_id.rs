@@ -24,21 +24,24 @@ pub struct DetectVlanIdData {
     pub layer:u8,
 }
 
+pub fn detect_parse_vlan_id(i: &str) -> IResult<&str, DetectVlanIdData> {
+    let parts: Vec<&str> = s.split(',').collect();
+    let id = u16::from_str(parts[0]).unwrap();
+    let layer = u8::from_str(parts[1]).unwrap();
+    let data = DetectVlanIdData { id, layer };
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn rs_detect_vlan_id_parse(
     ustr: *const std::os::raw::c_char,
 ) -> *mut DetectVlanIdData {
-
-    let ft_name: &CStr = CStr::from_ptr(ustr);
+    let ft_name: &CStr = CStr::from_ptr(ustr); //unsafe
     if let Ok(s) = ft_name.to_str() {
-        let parts: Vec<&str> = s.split(',').collect();
-        let id = u16::from_str(parts[0]).unwrap();
-        let layer = u8::from_str(parts[1]).unwrap();
-        let data = DetectVlanIdData { id, layer };
-        let boxed = Box::new(data);
-        return Box::into_raw(boxed);
+        if let Ok((_, ctx)) = detect_parse_vlan_id(s) {
+            let boxed = Box::new(ctx);
+            return Box::into_raw(boxed) as *mut _;
+        }
     }
-    SCLogNotice!("RETURN NULL");
     return std::ptr::null_mut();
 }
 
