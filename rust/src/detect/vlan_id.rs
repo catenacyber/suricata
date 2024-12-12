@@ -15,6 +15,9 @@
  * 02110-1301, USA.
  */
 
+ use std::ffi::CStr;
+ use std::str::FromStr;
+
 #[repr(C)]
 pub struct DetectVlanIdData {
     pub id: u16,
@@ -22,12 +25,20 @@ pub struct DetectVlanIdData {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn rs_detect_vlan_id_parse() -> *mut DetectVlanIdData {
-    let data = DetectVlanIdData {
-        id: 400,
-        layer: 3,
-    };
-    let boxed = Box::new(data);
-    Box::into_raw(boxed)
+pub unsafe extern "C" fn rs_detect_vlan_id_parse(
+    ustr: *const std::os::raw::c_char,
+) -> *mut DetectVlanIdData {
+
+    let ft_name: &CStr = CStr::from_ptr(ustr);
+    if let Ok(s) = ft_name.to_str() {
+        let parts: Vec<&str> = s.split(',').collect();
+        let id = u16::from_str(parts[0]).unwrap();
+        let layer = u8::from_str(parts[1]).unwrap();
+        let data = DetectVlanIdData { id, layer };
+        let boxed = Box::new(data);
+        return Box::into_raw(boxed);
+    }
+    SCLogNotice!("RETURN NULL");
+    return std::ptr::null_mut();
 }
 

@@ -127,7 +127,9 @@ error:
 static int DetectVlanIdSetup(DetectEngineCtx *de_ctx, Signature *s, const char *rawstr)
 {
     //DetectVlanIdData *vdata = DetectVlanIdParse(de_ctx, rawstr);
-    DetectVlanIdData *vdata = rs_detect_vlan_id_parse();
+    DetectVlanIdData *vdata = rs_detect_vlan_id_parse(rawstr);
+    SCLogInfo("vdata->id = [%i]", vdata->id);
+    SCLogInfo("vdata->layer = [%i]", vdata->layer);
     if (vdata == NULL)
         return -1;
 
