@@ -78,6 +78,7 @@ mod test {
         assert_eq!(
             detect_parse_vlan_id("300").unwrap(),
             DetectVlanIdData {
+                // FIXME use DetectUintData instead of u16 here
                 du16: 300,
                 layer: 0
             }
@@ -89,6 +90,16 @@ mod test {
                 layer: 1
             }
         );
+        assert_eq!(
+            detect_parse_vlan_id("200,-1").unwrap(),
+            DetectVlanIdData {
+                du16: 200,
+                layer: -1
+            }
+        );
+        //TODO write unit test with generic integer stuff like negated !200 and SV test 
+        // like 0x123 and test in combination with the layer parameter
+        // document that layer parameter can be negative
         assert!(detect_parse_vlan_id("200abc").is_none());
         assert!(detect_parse_vlan_id("4096").is_none());
         assert!(detect_parse_vlan_id("600,abc").is_none());
