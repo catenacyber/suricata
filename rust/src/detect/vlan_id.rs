@@ -24,11 +24,26 @@ pub struct DetectVlanIdData {
     pub layer:u8,
 }
 
-pub fn detect_parse_vlan_id(i: &str) -> IResult<&str, DetectVlanIdData> {
+pub fn detect_parse_vlan_id(s: &str) -> Option<DetectVlanIdData> {
     let parts: Vec<&str> = s.split(',').collect();
-    let id = u16::from_str(parts[0]).unwrap();
-    let layer = u8::from_str(parts[1]).unwrap();
-    let data = DetectVlanIdData { id, layer };
+    let id = u16::from_str(parts[0]);
+    if id.is_err() {
+        return None;
+    }
+    let id = id.unwrap();
+    if parts.len() > 2 {
+        return None;
+    }
+    let layer = if parts.len() == 2 {
+         u8::from_str(parts[1])
+    } else {
+        Ok(0)
+    };
+    if layer.is_err() {
+        return None;
+    }
+    let layer = layer.unwrap();
+    return Some(DetectVlanIdData { id, layer });
 }
 
 #[no_mangle]
@@ -37,7 +52,7 @@ pub unsafe extern "C" fn rs_detect_vlan_id_parse(
 ) -> *mut DetectVlanIdData {
     let ft_name: &CStr = CStr::from_ptr(ustr); //unsafe
     if let Ok(s) = ft_name.to_str() {
-        if let Ok((_, ctx)) = detect_parse_vlan_id(s) {
+        if let Some(ctx) = detect_parse_vlan_id(s) {
             let boxed = Box::new(ctx);
             return Box::into_raw(boxed) as *mut _;
         }
