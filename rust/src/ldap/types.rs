@@ -328,6 +328,34 @@ impl Display for ProtocolOp {
     }
 }
 
+impl Into<u8> for ProtocolOp {
+    fn into(self) -> u8 {
+        match self {
+            ProtocolOp::BindRequest(_) => 0,
+            ProtocolOp::BindResponse(_) => 1,
+            ProtocolOp::UnbindRequest => 2,
+            ProtocolOp::SearchRequest(_) => 3,
+            ProtocolOp::SearchResultEntry(_) => write!(f, "search_result_entry"),
+            ProtocolOp::SearchResultDone(_) => write!(f, "search_result_done"),
+            ProtocolOp::SearchResultReference(_) => write!(f, "search_result_reference"),
+            ProtocolOp::ModifyRequest(_) => 6,
+            ProtocolOp::ModifyResponse(_) => write!(f, "modify_response"),
+            ProtocolOp::AddRequest(_) => write!(f, "add_request"),
+            ProtocolOp::AddResponse(_) => write!(f, "add_response"),
+            ProtocolOp::DelRequest(_) => write!(f, "del_request"),
+            ProtocolOp::DelResponse(_) => write!(f, "del_response"),
+            ProtocolOp::ModDnRequest(_) => write!(f, "mod_dn_request"),
+            ProtocolOp::ModDnResponse(_) => write!(f, "mod_dn_response"),
+            ProtocolOp::CompareRequest(_) => write!(f, "compare_request"),
+            ProtocolOp::CompareResponse(_) => write!(f, "compare_response"),
+            ProtocolOp::ExtendedRequest(_) => write!(f, "extended_request"),
+            ProtocolOp::ExtendedResponse(_) => write!(f, "extended_response"),
+            ProtocolOp::IntermediateResponse(_) => write!(f, "intermediate_response"),
+            ProtocolOp::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LdapMessage {
     pub message_id: MessageID,
