@@ -202,7 +202,7 @@ unsafe extern "C" fn ldap_detect_responses_operation_match(
         LdapIndex::Index(idx) => {
             let index = if idx < 0 {
                 // negative values for backward indexing.
-                if tx.responses.len() as i32 + idx < 0 {
+                if tx.responses.len() < idx as usize{
                     return 0;
                 }
                 tx.responses.len() + idx as usize
