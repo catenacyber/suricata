@@ -99,7 +99,7 @@ unsafe extern "C" fn ldap_detect_request_operation_match(
     let tx = cast_pointer!(tx, LdapTransaction);
     let ctx = cast_pointer!(ctx, DetectUintData<u8>);
     if let Some(request) = &tx.request {
-        let option = request.protocol_op.to_u8();
+        let option = request.protocol_op as u8;
         return rs_detect_u8_match(option, ctx);
     }
     return 0;
@@ -183,7 +183,7 @@ unsafe extern "C" fn ldap_detect_responses_operation_match(
     match ctx.index {
         LdapIndex::Any => {
             for response in &tx.responses {
-                let option: u8 = response.protocol_op.to_u8();
+                let option: u8 = response.protocol_op as u8;
                 if rs_detect_u8_match(option, &ctx.response) == 1 {
                     return 1;
                 }
@@ -192,7 +192,7 @@ unsafe extern "C" fn ldap_detect_responses_operation_match(
         }
         LdapIndex::All => {
             for response in &tx.responses {
-                let option: u8 = response.protocol_op.to_u8();
+                let option: u8 = response.protocol_op as u8;
                 if rs_detect_u8_match(option, &ctx.response) == 0 {
                     return 0;
                 }
@@ -213,7 +213,7 @@ unsafe extern "C" fn ldap_detect_responses_operation_match(
                 return 0;
             }
             let response: &LdapMessage = &tx.responses[index];
-            let option: u8 = response.protocol_op.to_u8();
+            let option: u8 = response.protocol_op as u8;
             return rs_detect_u8_match(option, &ctx.response);
         }
     }
