@@ -59,6 +59,13 @@ pub struct DetectUintData<T> {
 ///
 /// Returns Some DetectUintData on success, None on failure
 pub fn detect_parse_uint_enum<T1: DetectIntType, T2: EnumString<T1>>(s: &str) -> Option<DetectUintData<T1>> {
+    let (s, neg) = opt(char('!'))(s)?;
+    let mode = if neg.is_some() {
+        DetectUintMode::DetectUintModeNe
+    } else {
+        DetectUintMode::DetectUintModeEqual
+    };
+
     if let Ok((_, ctx)) = detect_parse_uint::<T1>(s) {
         return Some(ctx);
     }
@@ -66,7 +73,7 @@ pub fn detect_parse_uint_enum<T1: DetectIntType, T2: EnumString<T1>>(s: &str) ->
         let ctx = DetectUintData::<T1> {
             arg1: enum_val.into_u(),
             arg2: T1::min_value(),
-            mode: DetectUintMode::DetectUintModeEqual,
+            mode: mode,
         };
         return Some(ctx);
     }
