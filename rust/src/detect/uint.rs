@@ -65,7 +65,8 @@ pub fn detect_parse_uint_enum<T1: DetectIntType, T2: EnumString<T1>>(
         return Some(ctx);
     }
 
-    let (s, neg) = opt::<&str, _, Error<_>, _>(char('!'))(s).ok()?;
+    // we need to precise the Error type, we get error[E0283]: type annotations needed
+    let (s, neg) = opt(char::<_, Error<_>>('!'))(s).ok()?;
     let mode = if neg.is_some() {
         DetectUintMode::DetectUintModeNe
     } else {
