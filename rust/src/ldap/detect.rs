@@ -22,7 +22,8 @@ use crate::detect::uint::{
 };
 use crate::detect::{
     DetectBufferSetActiveList, DetectHelperBufferMpmRegister, DetectHelperBufferRegister,
-    DetectHelperGetData, DetectHelperKeywordRegister, DetectSignatureSetAppProto, SCSigTableElmt,
+    DetectHelperGetData, DetectHelperGetMultiData, DetectHelperKeywordRegister,
+    DetectHelperMultiBufferMpmRegister, DetectSignatureSetAppProto, SCSigTableElmt,
     SigMatchAppendSMToList, SIGMATCH_INFO_STICKY_BUFFER, SIGMATCH_NOOPT,
 };
 use crate::ldap::types::{LdapMessage, ProtocolOp, ProtocolOpCode};
@@ -333,46 +334,49 @@ unsafe extern "C" fn ldap_detect_responses_dn_setup(
 
 unsafe extern "C" fn ldap_detect_responses_dn_get_data(
     de: *mut c_void, transforms: *const c_void, flow: *const c_void, flow_flags: u8,
-    tx: *const c_void, list_id: c_int,
+    tx: *const c_void, list_id: c_int, local_id: u32,
 ) -> *mut c_void {
-    return DetectHelperGetData(
+    return DetectHelperGetMultiData(
         de,
         transforms,
         flow,
         flow_flags,
         tx,
         list_id,
+        local_id,
         ldap_tx_get_responses_dn,
     );
 }
 
 unsafe extern "C" fn ldap_tx_get_responses_dn(
-    tx: *const c_void, _flags: u8, buffer: *mut *const u8, buffer_len: *mut u32,
+    tx: *const c_void, _flags: u8, local_id: u32, buffer: *mut *const u8, buffer_len: *mut u32,
 ) -> bool {
     let tx = cast_pointer!(tx, LdapTransaction);
 
+    if local_id as usize >= tx.responses.len() {
+        return false;
+    }
     *buffer = std::ptr::null();
     *buffer_len = 0;
 
-    for response in &tx.responses {
-        let str_buffer: &str = match &response.protocol_op {
-            ProtocolOp::SearchResultEntry(req) => req.object_name.0.as_str(),
-            ProtocolOp::BindResponse(req) => req.result.matched_dn.0.as_str(),
-            ProtocolOp::SearchResultDone(req) => req.matched_dn.0.as_str(),
-            ProtocolOp::ModifyResponse(req) => req.result.matched_dn.0.as_str(),
-            ProtocolOp::AddResponse(req) => req.matched_dn.0.as_str(),
-            ProtocolOp::DelResponse(req) => req.matched_dn.0.as_str(),
-            ProtocolOp::ModDnResponse(req) => req.matched_dn.0.as_str(),
-            ProtocolOp::CompareResponse(req) => req.matched_dn.0.as_str(),
-            ProtocolOp::ExtendedResponse(req) => req.result.matched_dn.0.as_str(),
-            _ => return false,
-        };
+    let response = &tx.responses[local_id as usize];
+    // We expect every response in one tx to be the same protocol_op
+    let str_buffer: &str = match &response.protocol_op {
+        ProtocolOp::SearchResultEntry(req) => req.object_name.0.as_str(),
+        ProtocolOp::BindResponse(req) => req.result.matched_dn.0.as_str(),
+        ProtocolOp::SearchResultDone(req) => req.matched_dn.0.as_str(),
+        ProtocolOp::ModifyResponse(req) => req.result.matched_dn.0.as_str(),
+        ProtocolOp::AddResponse(req) => req.matched_dn.0.as_str(),
+        ProtocolOp::DelResponse(req) => req.matched_dn.0.as_str(),
+        ProtocolOp::ModDnResponse(req) => req.matched_dn.0.as_str(),
+        ProtocolOp::CompareResponse(req) => req.matched_dn.0.as_str(),
+        ProtocolOp::ExtendedResponse(req) => req.result.matched_dn.0.as_str(),
+        _ => return false,
+    };
 
-        *buffer = str_buffer.as_ptr();
-        *buffer_len = str_buffer.len() as u32;
-        return true;
-    }
-    return false;
+    *buffer = str_buffer.as_ptr();
+    *buffer_len = str_buffer.len() as u32;
+    return true;
 }
 
 #[no_mangle]
@@ -455,7 +459,7 @@ pub unsafe extern "C" fn ScDetectLdapRegister() {
         Free: None,
     };
     let _g_ldap_responses_dn_kw_id = DetectHelperKeywordRegister(&kw);
-    G_LDAP_RESPONSES_DN_BUFFER_ID = DetectHelperBufferMpmRegister(
+    G_LDAP_RESPONSES_DN_BUFFER_ID = DetectHelperMultiBufferMpmRegister(
         b"ldap.responses.dn\0".as_ptr() as *const libc::c_char,
         b"LDAP RESPONSES DISTINGUISHED_NAME\0".as_ptr() as *const libc::c_char,
         ALPROTO_LDAP,
