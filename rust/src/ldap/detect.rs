@@ -311,18 +311,22 @@ unsafe extern "C" fn ldap_detect_responses_result_code_match(
     let ctx = cast_pointer!(ctx, DetectUintData<u32>);
 
     for responses in &tx.responses {
-        let result_code: u32 = match &responses.protocol_op {
-            ProtocolOp::BindResponse(req) => req.result.result_code.0,
-            ProtocolOp::SearchResultDone(req) => req.result_code.0,
-            ProtocolOp::ModifyResponse(req) => req.result.result_code.0,
-            ProtocolOp::AddResponse(req) => req.result_code.0,
-            ProtocolOp::DelResponse(req) => req.result_code.0,
-            ProtocolOp::ModDnResponse(req) => req.result_code.0,
-            ProtocolOp::CompareResponse(req) => req.result_code.0,
-            ProtocolOp::ExtendedResponse(req) => req.result.result_code.0,
-            _ => return 0,
+        let result_code = match &responses.protocol_op {
+            ProtocolOp::BindResponse(req) => Some(req.result.result_code.0),
+            ProtocolOp::SearchResultDone(req) => Some(req.result_code.0),
+            ProtocolOp::ModifyResponse(req) => Some(req.result.result_code.0),
+            ProtocolOp::AddResponse(req) => Some(req.result_code.0),
+            ProtocolOp::DelResponse(req) => Some(req.result_code.0),
+            ProtocolOp::ModDnResponse(req) => Some(req.result_code.0),
+            ProtocolOp::CompareResponse(req) => Some(req.result_code.0),
+            ProtocolOp::ExtendedResponse(req) => Some(req.result.result_code.0),
+            _ => None,
         };
-        return rs_detect_u32_match(result_code, ctx);
+        if let Some(rc) = result_code {
+            if rs_detect_u32_match(rc, ctx) > 0 {
+                return 1;
+            }
+        }
     }
     return 0;
 }
