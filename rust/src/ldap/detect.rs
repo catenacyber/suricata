@@ -37,8 +37,6 @@ enum LdapIndex {
     Index(i32),
 }
 
-pub static UNKNOWN_CODE: u32 = u32::MAX;
-
 #[derive(Debug, PartialEq)]
 struct DetectLdapRespData {
     /// Ldap response code
@@ -312,9 +310,7 @@ unsafe extern "C" fn ldap_detect_responses_result_code_match(
     let tx = cast_pointer!(tx, LdapTransaction);
     let ctx = cast_pointer!(ctx, DetectUintData<u32>);
 
-    let mut result = 0;
     for responses in &tx.responses {
-        //SCLogInfo!("Banana");
         let result_code: u32 = match &responses.protocol_op {
             ProtocolOp::BindResponse(req) => req.result.result_code.0,
             ProtocolOp::SearchResultDone(req) => req.result_code.0,
@@ -324,16 +320,11 @@ unsafe extern "C" fn ldap_detect_responses_result_code_match(
             ProtocolOp::ModDnResponse(req) => req.result_code.0,
             ProtocolOp::CompareResponse(req) => req.result_code.0,
             ProtocolOp::ExtendedResponse(req) => req.result.result_code.0,
-            _ => UNKNOWN_CODE,
+            _ => return 0,
         };
-        if result_code != UNKNOWN_CODE {
-            result = rs_detect_u32_match(result_code, ctx);
-            if result == 1 {
-                return result;
-            }
-        }
+        return rs_detect_u32_match(result_code, ctx);
     }
-    return result;
+    return 0;
 }
 
 unsafe extern "C" fn ldap_detect_responses_result_code_free(_de: *mut c_void, ctx: *mut c_void) {
