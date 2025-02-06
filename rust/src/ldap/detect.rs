@@ -431,9 +431,9 @@ pub unsafe extern "C" fn ScDetectLdapRegister() {
         false, //to server
     );
     let kw = SCSigTableElmt {
-        name: b"ldap.request.distinguished_name\0".as_ptr() as *const libc::c_char,
+        name: b"ldap.request.dn\0".as_ptr() as *const libc::c_char,
         desc: b"match request LDAPDN\0".as_ptr() as *const libc::c_char,
-        url: b"/rules/ldap-keywords.html#ldap.request.distinguished_name\0".as_ptr()
+        url: b"/rules/ldap-keywords.html#ldap.request.dn\0".as_ptr()
             as *const libc::c_char,
         Setup: ldap_detect_request_dn_setup,
         flags: SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER,
@@ -442,7 +442,7 @@ pub unsafe extern "C" fn ScDetectLdapRegister() {
     };
     let _g_ldap_request_dn_kw_id = DetectHelperKeywordRegister(&kw);
     G_LDAP_REQUEST_DN_BUFFER_ID = DetectHelperBufferMpmRegister(
-        b"ldap.request.distinguished_name\0".as_ptr() as *const libc::c_char,
+        b"ldap.request.dn\0".as_ptr() as *const libc::c_char,
         b"LDAP REQUEST DISTINGUISHED_NAME\0".as_ptr() as *const libc::c_char,
         ALPROTO_LDAP,
         false, //to client
