@@ -324,14 +324,19 @@ unsafe extern "C" fn ldap_tx_get_req_attribute_type(
                 }
                 req.attributes[local_id as usize].attr_type.0.as_str()
             }
-            ProtocolOp::CompareRequest(req) => req.ava.attribute_desc.0.as_str(),
+            ProtocolOp::CompareRequest(req) => {
+                if local_id > 0 {
+                    return false;
+                }
+                req.ava.attribute_desc.0.as_str(),
+            }
             _ => return false,
         };
         *buffer = str_buffer.as_ptr();
         *buffer_len = str_buffer.len() as u32;
+        return true;
     }
-
-    return true;
+return false;
 }
 
 #[no_mangle]
