@@ -31,6 +31,7 @@ use crate::ldap::types::{LdapMessage, LdapResultCode, ProtocolOp, ProtocolOpCode
 use std::ffi::CStr;
 use std::os::raw::{c_int, c_void};
 use std::str::FromStr;
+use std::collections::VecDeque;
 
 #[derive(Debug, PartialEq)]
 enum LdapIndex {
