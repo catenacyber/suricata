@@ -193,14 +193,14 @@ unsafe extern "C" fn ldap_detect_responses_operation_setup(
     return 0;
 }
 
-fn match_at_index<T>(
-    tx: &LdapTransaction, ctx_value: &DetectUintData<T>,
-    get_value: impl Fn(&LdapMessage) -> Option<T>,
-    detect_match: impl Fn(T, &DetectUintData<T>) -> c_int, index: &LdapIndex,
+fn match_at_index<T, U>(
+    array: &Vec<T>, ctx_value: &DetectUintData<U>,
+    get_value: impl Fn(&T) -> Option<U>,
+    detect_match: impl Fn(U, &DetectUintData<U>) -> c_int, index: &LdapIndex,
 ) -> c_int {
     match index {
         LdapIndex::Any => {
-            for response in &tx.responses {
+            for response in array {
                 if let Some(code) = get_value(response) {
                     if detect_match(code, ctx_value) == 1 {
                         return 1;
@@ -210,7 +210,7 @@ fn match_at_index<T>(
             return 0;
         }
         LdapIndex::All => {
-            for response in &tx.responses {
+            for response in array {
                 if let Some(code) = get_value(response) {
                     if detect_match(code, ctx_value) == 0 {
                         return 0;
@@ -222,15 +222,14 @@ fn match_at_index<T>(
         LdapIndex::Index(idx) => {
             let index = if *idx < 0 {
                 // negative values for backward indexing.
-                ((tx.responses.len() as i32) + idx) as usize
+                ((array.len() as i32) + idx) as usize
             } else {
                 *idx as usize
             };
-            if tx.responses.len() <= index {
+            if array.len() <= index {
                 return 0;
             }
-            let response: &LdapMessage = &tx.responses[index];
-            if let Some(code) = get_value(response) {
+            if let Some(code) = get_value(&array[index]) {
                 return detect_match(code, ctx_value);
             }
             return 0;
