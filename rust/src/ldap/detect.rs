@@ -17,8 +17,8 @@
 
 use super::ldap::{LdapTransaction, ALPROTO_LDAP};
 use crate::detect::uint::{
-    detect_parse_uint_enum, rs_detect_u32_free, rs_detect_u32_match, rs_detect_u32_parse,
-    rs_detect_u8_free, rs_detect_u8_match, DetectUintData,
+    detect_parse_uint_enum, rs_detect_u32_free, detect_match_uint, rs_detect_u32_parse,
+    rs_detect_u8_free, DetectUintData,
 };
 use crate::detect::{
     DetectBufferSetActiveList, DetectHelperBufferMpmRegister, DetectHelperBufferRegister,
@@ -116,7 +116,7 @@ unsafe extern "C" fn ldap_detect_request_operation_match(
     let ctx = cast_pointer!(ctx, DetectUintData<u8>);
     if let Some(request) = &tx.request {
         let option = request.protocol_op.to_u8();
-        return rs_detect_u8_match(option, ctx);
+        return detect_match_uint(ctx, option) as c_int;
     }
     return 0;
 }
@@ -194,7 +194,7 @@ unsafe extern "C" fn ldap_detect_responses_operation_setup(
 }
 
 fn match_at_index<T, U>(
-    array: &Vec<T>, ctx_value: &DetectUintData<U>,
+    array: &VecDeque<T>, ctx_value: &DetectUintData<U>,
     get_value: impl Fn(&T) -> Option<U>,
     detect_match: impl Fn(U, &DetectUintData<U>) -> c_int, index: &LdapIndex,
 ) -> c_int {
@@ -244,11 +244,11 @@ unsafe extern "C" fn ldap_detect_responses_operation_match(
     let tx = cast_pointer!(tx, LdapTransaction);
     let ctx = cast_pointer!(ctx, DetectLdapRespOpData);
 
-    return match_at_index::<u8>(
-        tx,
+    return match_at_index::<LdapMessage, u8>(
+        &tx.responses,
         &ctx.du8,
         |response| Some(response.protocol_op.to_u8()),
-        |code, ctx_value| unsafe { rs_detect_u8_match(code, ctx_value) },
+        |code, ctx_value| detect_match_uint(ctx_value, code) as c_int,
         &ctx.index,
     );
 }
@@ -291,7 +291,7 @@ unsafe extern "C" fn ldap_detect_responses_count_match(
     let tx = cast_pointer!(tx, LdapTransaction);
     let ctx = cast_pointer!(ctx, DetectUintData<u32>);
     let len = tx.responses.len() as u32;
-    return rs_detect_u32_match(len, ctx);
+    return detect_match_uint(ctx, len) as c_int;
 }
 
 unsafe extern "C" fn ldap_detect_responses_count_free(_de: *mut c_void, ctx: *mut c_void) {
@@ -404,7 +404,7 @@ unsafe extern "C" fn ldap_tx_get_responses_dn(
         ProtocolOp::ModDnResponse(resp) => resp.matched_dn.0.as_str(),
         ProtocolOp::CompareResponse(resp) => resp.matched_dn.0.as_str(),
         ProtocolOp::ExtendedResponse(resp) => resp.result.matched_dn.0.as_str(),
-        _ => return false,
+        _ => "", //TODO document behavior
     };
 
     *buffer = str_buffer.as_ptr();
@@ -463,7 +463,7 @@ unsafe extern "C" fn ldap_detect_responses_result_code_setup(
 }
 
 fn get_ldap_result_code(response: &LdapMessage) -> Option<u32> {
-    let result_code = match &response.protocol_op {
+    return match &response.protocol_op {
         ProtocolOp::BindResponse(resp) => Some(resp.result.result_code.0),
         ProtocolOp::SearchResultDone(resp) => Some(resp.result_code.0),
         ProtocolOp::ModifyResponse(resp) => Some(resp.result.result_code.0),
@@ -474,7 +474,6 @@ fn get_ldap_result_code(response: &LdapMessage) -> Option<u32> {
         ProtocolOp::ExtendedResponse(resp) => Some(resp.result.result_code.0),
         _ => None,
     };
-    return result_code;
 }
 
 unsafe extern "C" fn ldap_detect_responses_result_code_match(
@@ -484,11 +483,11 @@ unsafe extern "C" fn ldap_detect_responses_result_code_match(
     let tx = cast_pointer!(tx, LdapTransaction);
     let ctx = cast_pointer!(ctx, DetectLdapRespResultData);
 
-    return match_at_index::<u32>(
-        tx,
+    return match_at_index::<LdapMessage, u32>(
+        &tx.responses,
         &ctx.du32,
         get_ldap_result_code,
-        |code, ctx_value| unsafe { rs_detect_u32_match(code, ctx_value) },
+        |code, ctx_value| detect_match_uint(ctx_value, code) as c_int,
         &ctx.index,
     );
 }
