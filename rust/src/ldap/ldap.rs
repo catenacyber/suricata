@@ -24,11 +24,11 @@ use crate::direction::Direction;
 use crate::flow::Flow;
 use crate::frames::*;
 use nom7 as nom;
-use suricata_sys::sys::AppProto;
 use std;
 use std::collections::VecDeque;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
+use suricata_sys::sys::AppProto;
 
 use crate::ldap::types::*;
 
@@ -59,6 +59,7 @@ pub struct LdapTransaction {
     pub request: Option<LdapMessage>,
     pub responses: VecDeque<LdapMessage>,
     complete: bool,
+    pub(super) attributes: Vec<Vec<u8>>,
 
     tx_data: AppLayerTxData,
 }
@@ -76,6 +77,7 @@ impl LdapTransaction {
             request: None,
             responses: VecDeque::new(),
             complete: false,
+            attributes: Vec::new(),
             tx_data: AppLayerTxData::new(),
         }
     }

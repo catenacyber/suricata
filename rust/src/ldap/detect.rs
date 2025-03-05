@@ -494,7 +494,16 @@ unsafe extern "C" fn ldap_tx_get_resp_attribute_type(
         match &response.protocol_op {
             ProtocolOp::SearchResultEntry(resp) => {
                 if local_id < pos + resp.attributes.len() as u32 {
-                    let value = &resp.attributes[(local_id - pos) as usize].attr_type.0;
+                    let value = if (local_id as usize) < tx.attributes.len() {
+                        &tx.attributes[i]
+                    } else {
+                        let mut v = Vec::new();
+                        v.extend_from_slice(&resp.attributes[(local_id - pos) as usize].attr_type.0.as_bytes());
+                        v.push(b'=');
+                        v.extend_from_slice(&resp.attributes[(local_id - pos) as usize].attr_vals[0].0);
+                        tx.attributes.push(v);
+                        tx.attributes.last().unwrap()
+                    };
                     *buffer = value.as_ptr(); //unsafe
                     *buffer_len = value.len() as u32;
                     return true;
