@@ -64,7 +64,7 @@ pub enum SSHEvent {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone, PartialOrd, PartialEq, Eq)]
+#[derive(AppLayerState, Copy, Clone, PartialOrd, PartialEq, Eq)]
 /// cbindgen:prefix-with-name=true
 pub enum SSHConnectionState {
     InProgress = 0,
