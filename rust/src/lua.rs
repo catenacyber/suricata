@@ -20,6 +20,9 @@
 use std::os::raw::c_char;
 use std::os::raw::c_int;
 use std::os::raw::c_long;
+use std::os::raw::c_void;
+
+use suricata_sys::sys::AppProto;
 
 /// The Rust place holder for lua_State.
 pub enum CLuaState {}
@@ -30,6 +33,33 @@ extern "C" {
     fn lua_settable(lua: *mut CLuaState, idx: c_long);
     fn lua_pushlstring(lua: *mut CLuaState, s: *const c_char, len: usize);
     fn lua_pushinteger(lua: *mut CLuaState, n: i64);
+
+    pub(crate) fn luaL_newmetatable(lua: *mut CLuaState, s: *const c_char);
+    pub(crate) fn lua_pushvalue(lua: *mut CLuaState, v: c_int);
+    pub(crate) fn lua_setfield(lua: *mut CLuaState, v: c_int, s: *const c_char);
+    pub(crate) fn luaL_setfuncs(lua: *mut CLuaState, regs: *const luaL_Reg, v: c_int);
+    pub(crate) fn luaL_newlib(lua: *mut CLuaState, regs: *const luaL_Reg);
+    pub(crate) fn luaL_getmetatable(lua: *mut CLuaState, s: *const c_char);
+    pub(crate) fn lua_setmetatable(lua: *mut CLuaState, v: c_int);
+    pub(crate) fn lua_newuserdata(lua: *mut CLuaState, v: usize) -> *mut c_void;
+    pub(crate) fn luaL_testudata(lua: *mut CLuaState, v: c_int, s: *const c_char) -> *mut c_void;
+    pub(crate) fn lua_pushnil(lua: *mut CLuaState);
+
+    // from src/util-lua-common.h
+    pub fn LuaStateNeedProto(lua: *mut CLuaState, alproto: AppProto) -> c_int;
+    pub fn LuaCallbackError(lua: *mut CLuaState, msg: *const c_char) -> c_int;
+    pub fn LuaStateGetTX(lua: *mut CLuaState) -> *mut c_void;
+
+    // from src/util-lua.h
+    pub fn LuaPushStringBuffer(lua: *mut CLuaState, b: *const u8, l: usize) -> c_int;
+}
+
+pub(crate) type LuaCfunction = unsafe extern "C" fn(lua: *mut CLuaState) -> c_int;
+
+#[repr(C)]
+pub(crate) struct luaL_Reg {
+    pub name: *const c_char,
+    pub func: Option<LuaCfunction>,
 }
 
 pub struct LuaState {

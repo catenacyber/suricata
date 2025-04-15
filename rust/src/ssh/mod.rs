@@ -19,5 +19,6 @@
 
 pub mod detect;
 pub mod logger;
+pub mod lua;
 mod parser;
 pub mod ssh;

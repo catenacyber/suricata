@@ -537,7 +537,6 @@ noinst_HEADERS = \
 	util-lua-packetlib.h \
 	util-lua-sandbox.h \
 	util-lua-smtp.h \
-	util-lua-ssh.h \
 	util-lua-tls.h \
 	util-flow-rate.h \
 	util-macset.h \
@@ -1106,7 +1105,6 @@ libsuricata_c_a_SOURCES = \
 	util-lua-packetlib.c \
 	util-lua-sandbox.c \
 	util-lua-smtp.c \
-	util-lua-ssh.c \
 	util-lua-tls.c \
 	util-macset.c \
 	util-flow-rate.c \
