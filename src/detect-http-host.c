@@ -66,23 +66,45 @@ static void DetectHttpHHRegisterTests(void);
 static bool DetectHttpHostValidateCallback(
         const Signature *s, const char **sigerror, const DetectBufferType *dbt);
 static int DetectHttpHostSetup(DetectEngineCtx *, Signature *, const char *);
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id);
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
 static int DetectHttpHRHSetup(DetectEngineCtx *, Signature *, const char *);
 static int g_http_raw_host_buffer_id = 0;
 static int DetectHttpHostRawSetupSticky(DetectEngineCtx *de_ctx, Signature *s, const char *str);
-static InspectionBuffer *GetRawData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id);
-static InspectionBuffer *GetRawData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
 static int g_http_host_buffer_id = 0;
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, uint8_t _flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    htp_tx_t *tx = (htp_tx_t *)txv;
+
+    if (htp_tx_request_hostname(tx) == NULL)
+        return false;
+
+    *data_len = bstr_len(htp_tx_request_hostname(tx));
+    *data = bstr_ptr(htp_tx_request_hostname(tx));
+    return true;
+}
+
+static bool GetRawData(DetectEngineThreadCtx *det_ctx, const void *txv, uint8_t _flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    htp_tx_t *tx = (htp_tx_t *)txv;
+
+    if (htp_uri_hostname(htp_tx_parsed_uri(tx)) == NULL) {
+        if (htp_tx_request_headers(tx) == NULL)
+            return false;
+
+        const htp_header_t *h = htp_tx_request_header(tx, "Host");
+        if (h == NULL || htp_header_value(h) == NULL)
+            return false;
+
+        *data = htp_header_value_ptr(h);
+        *data_len = htp_header_value_len(h);
+    } else {
+        *data = (const uint8_t *)bstr_ptr(htp_uri_hostname(htp_tx_parsed_uri(tx)));
+        *data_len = bstr_len(htp_uri_hostname(htp_tx_parsed_uri(tx)));
+    }
+    return true;
+}
 
 /**
  * \brief Registers the keyword handlers for the "http_host" keyword.
@@ -115,10 +137,10 @@ void DetectHttpHHRegister(void)
             GetData, ALPROTO_HTTP1, HTP_REQUEST_PROGRESS_HEADERS);
 
     DetectAppLayerInspectEngineRegister("http_host", ALPROTO_HTTP2, SIG_FLAG_TOSERVER,
-            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, GetData2);
+            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, SCHttp2TxGetHostNorm);
 
     DetectAppLayerMpmRegister("http_host", SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetData2, ALPROTO_HTTP2, HTTP2StateDataClient);
+            SCHttp2TxGetHostNorm, ALPROTO_HTTP2, HTTP2StateDataClient);
 
     DetectBufferTypeRegisterValidateCallback("http_host",
             DetectHttpHostValidateCallback);
@@ -152,10 +174,10 @@ void DetectHttpHHRegister(void)
             GetRawData, ALPROTO_HTTP1, HTP_REQUEST_PROGRESS_HEADERS);
 
     DetectAppLayerInspectEngineRegister("http_raw_host", ALPROTO_HTTP2, SIG_FLAG_TOSERVER,
-            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, GetRawData2);
+            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, SCHttp2TxGetHost);
 
     DetectAppLayerMpmRegister("http_raw_host", SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetRawData2, ALPROTO_HTTP2, HTTP2StateDataClient);
+            SCHttp2TxGetHost, ALPROTO_HTTP2, HTTP2StateDataClient);
 
     DetectBufferTypeSetDescriptionByName("http_raw_host",
             "http raw host header");
@@ -240,67 +262,6 @@ static int DetectHttpHostSetup(DetectEngineCtx *de_ctx, Signature *s, const char
     return 0;
 }
 
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-
-        if (htp_tx_request_hostname(tx) == NULL)
-            return NULL;
-
-        const uint32_t data_len = bstr_len(htp_tx_request_hostname(tx));
-        const uint8_t *data = bstr_ptr(htp_tx_request_hostname(tx));
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
-}
-
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetHostNorm(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
-static InspectionBuffer *GetRawData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetHost(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 /**
  * \brief The setup function for the http_raw_host keyword for a signature.
  *
@@ -336,39 +297,6 @@ static int DetectHttpHostRawSetupSticky(DetectEngineCtx *de_ctx, Signature *s, c
     if (DetectSignatureSetAppProto(s, ALPROTO_HTTP) < 0)
         return -1;
     return 0;
-}
-
-static InspectionBuffer *GetRawData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-
-        const uint8_t *data = NULL;
-        uint32_t data_len = 0;
-
-        if (htp_uri_hostname(htp_tx_parsed_uri(tx)) == NULL) {
-            if (htp_tx_request_headers(tx) == NULL)
-                return NULL;
-
-            const htp_header_t *h = htp_tx_request_header(tx, "Host");
-            if (h == NULL || htp_header_value(h) == NULL)
-                return NULL;
-
-            data = htp_header_value_ptr(h);
-            data_len = htp_header_value_len(h);
-        } else {
-            data = (const uint8_t *)bstr_ptr(htp_uri_hostname(htp_tx_parsed_uri(tx)));
-            data_len = bstr_len(htp_uri_hostname(htp_tx_parsed_uri(tx)));
-        }
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
 }
 
 /************************************Unittests*********************************/

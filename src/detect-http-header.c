@@ -74,8 +74,7 @@ static uint8_t *GetBufferForTX(
     *buffer_len = 0;
 
     HttpHeaderThreadData *hdr_td = NULL;
-    HttpHeaderBuffer *buf =
-            HttpHeaderGetBufferSpace(det_ctx, f, flags, g_keyword_thread_id, &hdr_td);
+    HttpHeaderBuffer *buf = HttpHeaderGetBufferSpace(det_ctx, flags, g_keyword_thread_id, &hdr_td);
     if (unlikely(buf == NULL)) {
         return NULL;
     }
@@ -141,26 +140,6 @@ static uint8_t *GetBufferForTX(
 
     *buffer_len = buf->len;
     return buf->buffer;
-}
-
-static InspectionBuffer *GetBuffer2ForTX(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetHeaders(txv, flow_flags, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
 }
 
 /** \internal
@@ -437,14 +416,14 @@ void DetectHttpHeaderRegister(void)
             0); /* not used, registered twice: HEADERS/TRAILER */
 
     DetectAppLayerInspectEngineRegister("http_header", ALPROTO_HTTP2, SIG_FLAG_TOSERVER,
-            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, GetBuffer2ForTX);
+            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, SCHttp2TxGetHeaders);
     DetectAppLayerMpmRegister("http_header", SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetBuffer2ForTX, ALPROTO_HTTP2, HTTP2StateDataClient);
+            SCHttp2TxGetHeaders, ALPROTO_HTTP2, HTTP2StateDataClient);
 
     DetectAppLayerInspectEngineRegister("http_header", ALPROTO_HTTP2, SIG_FLAG_TOCLIENT,
-            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, GetBuffer2ForTX);
+            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, SCHttp2TxGetHeaders);
     DetectAppLayerMpmRegister("http_header", SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            GetBuffer2ForTX, ALPROTO_HTTP2, HTTP2StateDataServer);
+            SCHttp2TxGetHeaders, ALPROTO_HTTP2, HTTP2StateDataServer);
 
     DetectBufferTypeSetDescriptionByName("http_header",
             "http headers");

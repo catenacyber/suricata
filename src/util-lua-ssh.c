@@ -66,7 +66,7 @@ static int LuaSshTxGetProto(lua_State *L, uint8_t flags)
         lua_pushnil(L);
         return 1;
     }
-    if (SCSshTxGetProtocol(ltx->tx, &buf, &b_len, flags) != 1) {
+    if (!SCSshTxGetProtocol(NULL, ltx->tx, flags, &buf, &b_len)) {
         lua_pushnil(L);
         return 1;
     }
@@ -92,7 +92,7 @@ static int LuaSshTxGetSoftware(lua_State *L, uint8_t flags)
         lua_pushnil(L);
         return 1;
     }
-    if (SCSshTxGetSoftware(ltx->tx, &buf, &b_len, flags) != 1) {
+    if (!SCSshTxGetSoftware(NULL, ltx->tx, flags, &buf, &b_len)) {
         lua_pushnil(L);
         return 1;
     }
@@ -118,7 +118,7 @@ static int LuaSshTxGetHassh(lua_State *L, uint8_t flags)
         lua_pushnil(L);
         return 1;
     }
-    if (SCSshTxGetHassh(ltx->tx, &buf, &b_len, flags) != 1) {
+    if (!SCSshTxGetHassh(NULL, ltx->tx, flags, &buf, &b_len)) {
         lua_pushnil(L);
         return 1;
     }
@@ -144,7 +144,7 @@ static int LuaSshTxGetHasshString(lua_State *L, uint8_t flags)
         lua_pushnil(L);
         return 1;
     }
-    if (SCSshTxGetHasshString(ltx->tx, &buf, &b_len, flags) != 1) {
+    if (!SCSshTxGetHasshString(NULL, ltx->tx, flags, &buf, &b_len)) {
         lua_pushnil(L);
         return 1;
     }

@@ -56,32 +56,6 @@
 #define BUFFER_DESC "ssh software field"
 static int g_buffer_id = 0;
 
-static InspectionBuffer *GetSshData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-
-    if (buffer->inspect == NULL) {
-        const uint8_t *software = NULL;
-        uint32_t b_len = 0;
-
-        if (SCSshTxGetSoftware(txv, &software, &b_len, flow_flags) != 1)
-            return NULL;
-        if (software == NULL || b_len == 0) {
-            SCLogDebug("SSH software version not set");
-            return NULL;
-        }
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, software, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 static int DetectSshSoftwareSetup(DetectEngineCtx *de_ctx, Signature *s, const char *arg)
 {
     if (SCDetectBufferSetActiveList(de_ctx, s, g_buffer_id) < 0)
@@ -104,14 +78,15 @@ void DetectSshSoftwareRegister(void)
     sigmatch_table[DETECT_SSH_SOFTWARE].flags |= SIGMATCH_INFO_STICKY_BUFFER | SIGMATCH_NOOPT;
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetSshData, ALPROTO_SSH, SshStateBannerDone),
+            SCSshTxGetSoftware, ALPROTO_SSH, SshStateBannerDone),
             DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2,
-                    PrefilterGenericMpmRegister, GetSshData, ALPROTO_SSH, SshStateBannerDone),
+                    PrefilterGenericMpmRegister, SCSshTxGetSoftware, ALPROTO_SSH,
+                    SshStateBannerDone),
 
             DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SSH, SIG_FLAG_TOSERVER,
-                    SshStateBannerDone, DetectEngineInspectBufferGeneric, GetSshData);
+                    SshStateBannerDone, DetectEngineInspectBufferGeneric, SCSshTxGetSoftware);
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SSH, SIG_FLAG_TOCLIENT,
-            SshStateBannerDone, DetectEngineInspectBufferGeneric, GetSshData);
+            SshStateBannerDone, DetectEngineInspectBufferGeneric, SCSshTxGetSoftware);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME, BUFFER_DESC);
 

@@ -67,11 +67,21 @@ static int DetectJA3SetupNoSupport(DetectEngineCtx *a, Signature *b, const char 
 
 #ifdef HAVE_JA3
 static int DetectTlsJa3SStringSetup(DetectEngineCtx *, Signature *, const char *);
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-       const DetectEngineTransforms *transforms,
-       Flow *f, const uint8_t flow_flags,
-       void *txv, const int list_id);
 static int g_tls_ja3s_str_buffer_id = 0;
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    const SSLState *ssl_state = (SSLState *)txv;
+
+    if (ssl_state->server_connp.ja3_str == NULL || ssl_state->server_connp.ja3_str->data == NULL) {
+        return false;
+    }
+
+    *data_len = strlen(ssl_state->server_connp.ja3_str->data);
+    *data = (uint8_t *)ssl_state->server_connp.ja3_str->data;
+    return true;
+}
 #endif
 
 /**
@@ -98,10 +108,10 @@ void DetectTlsJa3SStringRegister(void)
             GetData, ALPROTO_TLS, TLS_STATE_SERVER_HELLO);
 
     DetectAppLayerMpmRegister("ja3s.string", SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            Ja3DetectGetString, ALPROTO_QUIC, 1);
+            SCQuicTxGetJa3, ALPROTO_QUIC, 1);
 
     DetectAppLayerInspectEngineRegister("ja3s.string", ALPROTO_QUIC, SIG_FLAG_TOCLIENT, 1,
-            DetectEngineInspectBufferGeneric, Ja3DetectGetString);
+            DetectEngineInspectBufferGeneric, SCQuicTxGetJa3);
 
     DetectBufferTypeSetDescriptionByName("ja3s.string", "TLS JA3S string");
 
@@ -143,28 +153,5 @@ static int DetectTlsJa3SStringSetup(DetectEngineCtx *de_ctx, Signature *s, const
     }
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const SSLState *ssl_state = (SSLState *)f->alstate;
-
-        if (ssl_state->server_connp.ja3_str == NULL ||
-                ssl_state->server_connp.ja3_str->data == NULL) {
-            return NULL;
-        }
-
-        const uint32_t data_len = strlen(ssl_state->server_connp.ja3_str->data);
-        const uint8_t *data = (uint8_t *)ssl_state->server_connp.ja3_str->data;
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
 }
 #endif

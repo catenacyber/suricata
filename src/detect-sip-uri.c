@@ -78,26 +78,6 @@ static int DetectSipUriSetup(DetectEngineCtx *de_ctx, Signature *s, const char *
     return 0;
 }
 
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCSipTxGetUri(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 void DetectSipUriRegister(void)
 {
     sigmatch_table[DETECT_SIP_URI].name = KEYWORD_NAME;
@@ -107,10 +87,10 @@ void DetectSipUriRegister(void)
     sigmatch_table[DETECT_SIP_URI].flags |= SIGMATCH_NOOPT;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SIP, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetData);
+            DetectEngineInspectBufferGeneric, SCSipTxGetUri);
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetData, ALPROTO_SIP, 1);
+            SCSipTxGetUri, ALPROTO_SIP, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME, BUFFER_DESC);
 

@@ -69,26 +69,6 @@ static int DetectKeyExchangeSetup(DetectEngineCtx *de_ctx, Signature *s, const c
     return 0;
 }
 
-static InspectionBuffer *GetKeyExchangeData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCIkeStateGetKeyExchange(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 void DetectIkeKeyExchangeRegister(void)
 {
     // register key_exchange
@@ -100,16 +80,16 @@ void DetectIkeKeyExchangeRegister(void)
     sigmatch_table[DETECT_IKE_KEY_EXCHANGE].flags |= SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_KEY_EXCHANGE, ALPROTO_IKE, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetKeyExchangeData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetKeyExchange);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_KEY_EXCHANGE, SIG_FLAG_TOSERVER, 1,
-            PrefilterGenericMpmRegister, GetKeyExchangeData, ALPROTO_IKE, 1);
+            PrefilterGenericMpmRegister, SCIkeStateGetKeyExchange, ALPROTO_IKE, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_KEY_EXCHANGE, ALPROTO_IKE, SIG_FLAG_TOCLIENT, 1,
-            DetectEngineInspectBufferGeneric, GetKeyExchangeData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetKeyExchange);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_KEY_EXCHANGE, SIG_FLAG_TOCLIENT, 1,
-            PrefilterGenericMpmRegister, GetKeyExchangeData, ALPROTO_IKE, 1);
+            PrefilterGenericMpmRegister, SCIkeStateGetKeyExchange, ALPROTO_IKE, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME_KEY_EXCHANGE, BUFFER_DESC_KEY_EXCHANGE);
 

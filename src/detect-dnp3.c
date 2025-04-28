@@ -146,31 +146,24 @@ static char *TrimString(char *str)
     return str;
 }
 
-static InspectionBuffer *GetDNP3Data(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t flow_flags,
-        void *txv, const int list_id)
+static bool GetDNP3Data(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **buf, uint32_t *buf_len)
 {
-    SCLogDebug("list_id %d", list_id);
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        DNP3Transaction *tx = (DNP3Transaction *)txv;
-        SCLogDebug("tx %p", tx);
+    DNP3Transaction *tx = (DNP3Transaction *)txv;
+    SCLogDebug("tx %p", tx);
 
-        if ((flow_flags & STREAM_TOSERVER && !tx->is_request) ||
-                (flow_flags & STREAM_TOCLIENT && tx->is_request)) {
-            return NULL;
-        }
-
-        if (tx->buffer == NULL || tx->buffer_len == 0) {
-            return NULL;
-        }
-
-        SCLogDebug("tx %p data %p data_len %u", tx, tx->buffer, tx->buffer_len);
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, tx->buffer, tx->buffer_len, transforms);
+    if ((flow_flags & STREAM_TOSERVER && !tx->is_request) ||
+            (flow_flags & STREAM_TOCLIENT && tx->is_request)) {
+        return false;
     }
-    return buffer;
+
+    if (tx->buffer == NULL || tx->buffer_len == 0) {
+        return false;
+    }
+
+    *buf = tx->buffer;
+    *buf_len = tx->buffer_len;
+    return true;
 }
 
 /**

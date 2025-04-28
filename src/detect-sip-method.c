@@ -105,26 +105,6 @@ static bool DetectSipMethodValidateCallback(
     return true;
 }
 
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCSipTxGetMethod(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 void DetectSipMethodRegister(void)
 {
     /* sip.method sticky buffer */
@@ -135,10 +115,10 @@ void DetectSipMethodRegister(void)
     sigmatch_table[DETECT_SIP_METHOD].flags |= SIGMATCH_NOOPT;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SIP, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetData);
+            DetectEngineInspectBufferGeneric, SCSipTxGetMethod);
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetData, ALPROTO_SIP, 1);
+            SCSipTxGetMethod, ALPROTO_SIP, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME, BUFFER_DESC);
 

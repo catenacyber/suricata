@@ -22,77 +22,77 @@ use std::ptr;
 
 #[no_mangle]
 pub unsafe extern "C" fn SCQuicTxGetUa(
-    tx: &QuicTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, QuicTransaction);
     if let Some(ua) = &tx.ua {
-        *buffer = ua.as_ptr();
-        *buffer_len = ua.len() as u32;
-        1
+        *buf = ua.as_ptr();
+        *len = ua.len() as u32;
+        true
     } else {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-        0
+        false
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCQuicTxGetSni(
-    tx: &QuicTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, QuicTransaction);
     if let Some(sni) = &tx.sni {
-        *buffer = sni.as_ptr();
-        *buffer_len = sni.len() as u32;
-        1
+        *buf = sni.as_ptr();
+        *len = sni.len() as u32;
+        true
     } else {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-        0
+        false
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCQuicTxGetJa3(
-    tx: &QuicTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, QuicTransaction);
     if let Some(ja3) = &tx.ja3 {
-        *buffer = ja3.as_ptr();
-        *buffer_len = ja3.len() as u32;
-        1
+        *buf = ja3.as_ptr();
+        *len = ja3.len() as u32;
+        true
     } else {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-        0
+        false
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCQuicTxGetJa4(
-    tx: &QuicTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, QuicTransaction);
     if let Some(ja4) = &tx.ja4 {
-        *buffer = ja4.as_ptr();
-        *buffer_len = ja4.len() as u32;
-        1
+        *buf = ja4.as_ptr();
+        *len = ja4.len() as u32;
+        true
     } else {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-        0
+        false
     }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCQuicTxGetVersion(
-    tx: &QuicTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, QuicTransaction);
     if tx.header.flags.is_long {
         let s = &tx.header.version_buf;
-        *buffer = s.as_ptr();
-        *buffer_len = s.len() as u32;
-        1
+        *buf = s.as_ptr();
+        *len = s.len() as u32;
+        true
     } else {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-        0
+        false
     }
 }
 

@@ -42,40 +42,36 @@ static mut G_SIP_CONTENT_LENGTH_HDR_BUFFER_ID: c_int = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSipTxGetMethod(
-    tx: &SIPTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SIPTransaction);
     if let Some(ref r) = tx.request {
         let m = &r.method;
         if !m.is_empty() {
-            *buffer = m.as_ptr();
-            *buffer_len = m.len() as u32;
-            return 1;
+            *buf = m.as_ptr();
+            *len = m.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-
-    return 0;
+    return false;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSipTxGetUri(
-    tx: &SIPTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SIPTransaction);
     if let Some(ref r) = tx.request {
         let p = &r.path;
         if !p.is_empty() {
-            *buffer = p.as_ptr();
-            *buffer_len = p.len() as u32;
-            return 1;
+            *buf = p.as_ptr();
+            *len = p.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-
-    return 0;
+    return false;
 }
 
 unsafe extern "C" fn sip_protocol_setup(

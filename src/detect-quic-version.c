@@ -46,25 +46,6 @@ static int quic_version_id = 0;
 
 static int DetectQuicVersionSetup(DetectEngineCtx *, Signature *, const char *);
 
-static InspectionBuffer *GetVersionData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCQuicTxGetVersion(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 /**
  * \brief Registration function for quic.version: keyword
  */
@@ -80,14 +61,14 @@ void DetectQuicVersionRegister(void)
 #endif
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetVersionData, ALPROTO_QUIC, 1);
+            SCQuicTxGetVersion, ALPROTO_QUIC, 1);
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            GetVersionData, ALPROTO_QUIC, 1);
+            SCQuicTxGetVersion, ALPROTO_QUIC, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_QUIC, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetVersionData);
+            DetectEngineInspectBufferGeneric, SCQuicTxGetVersion);
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_QUIC, SIG_FLAG_TOCLIENT, 1,
-            DetectEngineInspectBufferGeneric, GetVersionData);
+            DetectEngineInspectBufferGeneric, SCQuicTxGetVersion);
 
     quic_version_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }

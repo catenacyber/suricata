@@ -46,25 +46,6 @@ static int quic_ua_id = 0;
 
 static int DetectQuicUaSetup(DetectEngineCtx *, Signature *, const char *);
 
-static InspectionBuffer *GetUaData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCQuicTxGetUa(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 /**
  * \brief Registration function for quic.ua: keyword
  */
@@ -80,10 +61,10 @@ void DetectQuicUaRegister(void)
 #endif
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetUaData, ALPROTO_QUIC, 1);
+            SCQuicTxGetUa, ALPROTO_QUIC, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_QUIC, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetUaData);
+            DetectEngineInspectBufferGeneric, SCQuicTxGetUa);
 
     quic_ua_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }

@@ -258,50 +258,6 @@ int Ja3IsDisabled(const char *type)
     return 0;
 }
 
-InspectionBuffer *Ja3DetectGetHash(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCQuicTxGetJa3(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        uint8_t ja3_hash[SC_MD5_HEX_LEN + 1];
-        // this adds a final zero
-        SCMd5HashBufferToHex(b, b_len, (char *)ja3_hash, SC_MD5_HEX_LEN + 1);
-
-        InspectionBufferSetup(det_ctx, list_id, buffer, NULL, 0);
-        InspectionBufferCopy(buffer, ja3_hash, SC_MD5_HEX_LEN);
-        InspectionBufferApplyTransforms(det_ctx, buffer, transforms);
-    }
-    return buffer;
-}
-
-InspectionBuffer *Ja3DetectGetString(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCQuicTxGetJa3(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 #else /* HAVE_JA3 */
 
 /* Stubs for when JA3 is disabled */

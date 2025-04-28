@@ -57,15 +57,32 @@ static int DetectTlsFingerprintSetup(DetectEngineCtx *, Signature *, const char 
 #ifdef UNITTESTS
 static void DetectTlsFingerprintRegisterTests(void);
 #endif
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *f, const uint8_t flow_flags,
-        void *txv, const int list_id);
 static void DetectTlsFingerprintSetupCallback(const DetectEngineCtx *de_ctx,
         Signature *s);
 static bool DetectTlsFingerprintValidateCallback(
         const Signature *s, const char **sigerror, const DetectBufferType *dbt);
 static int g_tls_cert_fingerprint_buffer_id = 0;
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    const SSLState *ssl_state = (SSLState *)txv;
+    const SSLStateConnp *connp;
+
+    if (flow_flags & STREAM_TOSERVER) {
+        connp = &ssl_state->client_connp;
+    } else {
+        connp = &ssl_state->server_connp;
+    }
+
+    if (connp->cert0_fingerprint == NULL) {
+        return false;
+    }
+
+    *data_len = strlen(connp->cert0_fingerprint);
+    *data = (uint8_t *)connp->cert0_fingerprint;
+    return true;
+}
 
 /**
  * \brief Registration function for keyword: tls.cert_fingerprint
@@ -129,35 +146,6 @@ static int DetectTlsFingerprintSetup(DetectEngineCtx *de_ctx, Signature *s,
         return -1;
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const SSLState *ssl_state = (SSLState *)f->alstate;
-        const SSLStateConnp *connp;
-
-        if (flow_flags & STREAM_TOSERVER) {
-            connp = &ssl_state->client_connp;
-        } else {
-            connp = &ssl_state->server_connp;
-        }
-
-        if (connp->cert0_fingerprint == NULL) {
-            return NULL;
-        }
-
-        const uint32_t data_len = strlen(connp->cert0_fingerprint);
-        const uint8_t *data = (uint8_t *)connp->cert0_fingerprint;
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
 }
 
 static bool DetectTlsFingerprintValidateCallback(

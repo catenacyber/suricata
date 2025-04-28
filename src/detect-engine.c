@@ -2118,8 +2118,8 @@ uint8_t DetectEngineInspectBufferGeneric(DetectEngineCtx *de_ctx, DetectEngineTh
         transforms = engine->v2.transforms;
     }
 
-    const InspectionBuffer *buffer = engine->v2.GetData(det_ctx, transforms,
-            f, flags, txv, list_id);
+    const InspectionBuffer *buffer =
+            DetectGetSingleData(det_ctx, transforms, f, flags, txv, list_id, engine->v2.GetData);
     if (unlikely(buffer == NULL)) {
         if (eof && engine->match_on_null) {
             return DETECT_ENGINE_INSPECT_SIG_MATCH;
@@ -2157,6 +2157,23 @@ void DetectAppLayerMultiRegister(const char *name, AppProto alproto, uint32_t di
             name, alproto, dir, progress, DetectEngineInspectMultiBufferGeneric, NULL, GetData);
     DetectAppLayerMpmMultiRegister(
             name, dir, priority, PrefilterMultiGenericMpmRegister, GetData, alproto, progress);
+}
+
+InspectionBuffer *DetectGetSingleData(struct DetectEngineThreadCtx_ *det_ctx,
+        const DetectEngineTransforms *transforms, Flow *f, const uint8_t flow_flags, void *txv,
+        const int list_id, InspectionBufferGetDataPtr GetBuf)
+{
+    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
+    if (buffer->inspect == NULL) {
+        const uint8_t *b = NULL;
+        uint32_t b_len = 0;
+
+        if (!GetBuf(det_ctx, txv, flow_flags, &b, &b_len))
+            return NULL;
+
+        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
+    }
+    return buffer;
 }
 
 InspectionBuffer *DetectGetMultiData(struct DetectEngineThreadCtx_ *det_ctx,

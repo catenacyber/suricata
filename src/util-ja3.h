@@ -41,13 +41,4 @@ int Ja3BufferAddValue(JA3Buffer **, uint32_t);
 char *Ja3GenerateHash(JA3Buffer *);
 int Ja3IsDisabled(const char *);
 
-#ifdef HAVE_JA3
-InspectionBuffer *Ja3DetectGetHash(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
-
-InspectionBuffer *Ja3DetectGetString(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
-#endif /* HAVE_JA3 */
 #endif /* SURICATA_UTIL_JA3_H */

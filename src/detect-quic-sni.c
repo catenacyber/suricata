@@ -46,25 +46,6 @@ static int quic_sni_id = 0;
 
 static int DetectQuicSniSetup(DetectEngineCtx *, Signature *, const char *);
 
-static InspectionBuffer *GetSniData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCQuicTxGetSni(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 /**
  * \brief Registration function for quic.sni: keyword
  */
@@ -80,10 +61,10 @@ void DetectQuicSniRegister(void)
 #endif
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetSniData, ALPROTO_QUIC, 1);
+            SCQuicTxGetSni, ALPROTO_QUIC, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_QUIC, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetSniData);
+            DetectEngineInspectBufferGeneric, SCQuicTxGetSni);
 
     quic_sni_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }

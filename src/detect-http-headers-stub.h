@@ -44,110 +44,58 @@
 static int g_buffer_id = 0;
 
 #ifdef KEYWORD_TOSERVER
-static InspectionBuffer *GetRequestData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
+static bool GetRequestData(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **data, uint32_t *data_len)
 {
     SCEnter();
+    htp_tx_t *tx = (htp_tx_t *)txv;
 
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
+    if (htp_tx_request_headers(tx) == NULL)
+        return false;
 
-        if (htp_tx_request_headers(tx) == NULL)
-            return NULL;
-
-        const htp_header_t *h = htp_tx_request_header(tx, HEADER_NAME);
-        if (h == NULL || htp_header_value(h) == NULL) {
-            SCLogDebug("HTTP %s header not present in this request",
-                       HEADER_NAME);
-            return NULL;
-        }
-
-        const uint32_t data_len = htp_header_value_len(h);
-        const uint8_t *data = htp_header_value_ptr(h);
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
+    const htp_header_t *h = htp_tx_request_header(tx, HEADER_NAME);
+    if (h == NULL || htp_header_value(h) == NULL) {
+        SCLogDebug("HTTP %s header not present in this request", HEADER_NAME);
+        return false;
     }
 
-    return buffer;
+    *data_len = htp_header_value_len(h);
+    *data = htp_header_value_ptr(h);
+    return true;
 }
 
-static InspectionBuffer *GetRequestData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetRequestData2(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **b, uint32_t *b_len)
 {
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetHeaderValue(txv, STREAM_TOSERVER, HEADER_NAME, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
+    return SCHttp2TxGetHeaderValue(txv, STREAM_TOSERVER, HEADER_NAME, b, b_len);
 }
 
 #endif
 #ifdef KEYWORD_TOCLIENT
-static InspectionBuffer *GetResponseData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
+static bool GetResponseData(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **data, uint32_t *data_len)
 {
     SCEnter();
+    htp_tx_t *tx = (htp_tx_t *)txv;
 
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
+    if (htp_tx_response_headers(tx) == NULL)
+        return false;
 
-        if (htp_tx_response_headers(tx) == NULL)
-            return NULL;
-
-        const htp_header_t *h = htp_tx_response_header(tx, HEADER_NAME);
-        if (h == NULL || htp_header_value(h) == NULL) {
-            SCLogDebug("HTTP %s header not present in this request",
-                       HEADER_NAME);
-            return NULL;
-        }
-
-        const uint32_t data_len = htp_header_value_len(h);
-        const uint8_t *data = htp_header_value_ptr(h);
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
+    const htp_header_t *h = htp_tx_response_header(tx, HEADER_NAME);
+    if (h == NULL || htp_header_value(h) == NULL) {
+        SCLogDebug("HTTP %s header not present in this request", HEADER_NAME);
+        return false;
     }
 
-    return buffer;
+    *data_len = htp_header_value_len(h);
+    *data = htp_header_value_ptr(h);
+    return true;
 }
 
-static InspectionBuffer *GetResponseData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetResponseData2(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **b, uint32_t *b_len)
 {
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetHeaderValue(txv, STREAM_TOCLIENT, HEADER_NAME, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
+    return SCHttp2TxGetHeaderValue(txv, STREAM_TOCLIENT, HEADER_NAME, b, b_len);
 }
 #endif
 

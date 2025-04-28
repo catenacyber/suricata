@@ -54,11 +54,21 @@
 #include "util-unittest-helper.h"
 
 static int DetectTlsSniSetup(DetectEngineCtx *, Signature *, const char *);
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-       const DetectEngineTransforms *transforms,
-       Flow *f, const uint8_t flow_flags,
-       void *txv, const int list_id);
 static int g_tls_sni_buffer_id = 0;
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    const SSLState *ssl_state = (SSLState *)txv;
+
+    if (ssl_state->client_connp.sni == NULL) {
+        return false;
+    }
+
+    *data_len = strlen(ssl_state->client_connp.sni);
+    *data = (uint8_t *)ssl_state->client_connp.sni;
+    return true;
+}
 
 /**
  * \brief Registration function for keyword: tls.sni
@@ -106,26 +116,4 @@ static int DetectTlsSniSetup(DetectEngineCtx *de_ctx, Signature *s, const char *
         return -1;
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const SSLState *ssl_state = (SSLState *)f->alstate;
-
-        if (ssl_state->client_connp.sni == NULL) {
-            return NULL;
-        }
-
-        const uint32_t data_len = strlen(ssl_state->client_connp.sni);
-        const uint8_t *data = (uint8_t *)ssl_state->client_connp.sni;
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
 }

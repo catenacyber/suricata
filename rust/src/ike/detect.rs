@@ -46,75 +46,55 @@ pub extern "C" fn SCIkeStateGetExchType(tx: &IKETransaction, exch_type: *mut u8)
 }
 
 #[no_mangle]
-pub extern "C" fn SCIkeStateGetSpiInitiator(
-    tx: &IKETransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
-    debug_validate_bug_on!(buffer.is_null() || buffer_len.is_null());
-
-    unsafe {
-        *buffer = tx.hdr.spi_initiator.as_ptr();
-        *buffer_len = tx.hdr.spi_initiator.len() as u32;
-    }
-    return 1;
+pub unsafe extern "C" fn SCIkeStateGetSpiInitiator(
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, IKETransaction);
+    *buf = tx.hdr.spi_initiator.as_ptr();
+    *len = tx.hdr.spi_initiator.len() as u32;
+    return true;
 }
 
 #[no_mangle]
-pub extern "C" fn SCIkeStateGetSpiResponder(
-    tx: &IKETransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
-    debug_validate_bug_on!(buffer.is_null() || buffer_len.is_null());
-
-    unsafe {
-        *buffer = tx.hdr.spi_responder.as_ptr();
-        *buffer_len = tx.hdr.spi_responder.len() as u32;
-    }
-    return 1;
+pub unsafe extern "C" fn SCIkeStateGetSpiResponder(
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, IKETransaction);
+    *buf = tx.hdr.spi_responder.as_ptr();
+    *len = tx.hdr.spi_responder.len() as u32;
+    return true;
 }
 
 #[no_mangle]
-pub extern "C" fn SCIkeStateGetNonce(
-    tx: &IKETransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
-    debug_validate_bug_on!(buffer.is_null() || buffer_len.is_null());
-
+pub unsafe extern "C" fn SCIkeStateGetNonce(
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, IKETransaction);
     if tx.ike_version == 1 && !tx.hdr.ikev1_header.nonce.is_empty() {
         let p = &tx.hdr.ikev1_header.nonce;
-        unsafe {
-            *buffer = p.as_ptr();
-            *buffer_len = p.len() as u32;
-        }
-        return 1;
+        *buf = p.as_ptr();
+        *len = p.len() as u32;
+        return true;
     }
-
-    unsafe {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-    }
-
-    return 0;
+    return false;
 }
 
 #[no_mangle]
-pub extern "C" fn SCIkeStateGetKeyExchange(
-    tx: &IKETransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
-    debug_validate_bug_on!(buffer.is_null() || buffer_len.is_null());
-
+pub unsafe extern "C" fn SCIkeStateGetKeyExchange(
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, IKETransaction);
     if tx.ike_version == 1 && !tx.hdr.ikev1_header.key_exchange.is_empty() {
         let p = &tx.hdr.ikev1_header.key_exchange;
-        unsafe {
-            *buffer = p.as_ptr();
-            *buffer_len = p.len() as u32;
-        }
-        return 1;
+        *buf = p.as_ptr();
+        *len = p.len() as u32;
+        return true;
     }
-
-    unsafe {
-        *buffer = ptr::null();
-        *buffer_len = 0;
-    }
-
-    return 0;
+    return false;
 }
 
 #[no_mangle]

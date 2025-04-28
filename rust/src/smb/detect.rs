@@ -15,6 +15,7 @@
  * 02110-1301, USA.
  */
 
+use crate::core::DetectEngineThreadCtx;
 use crate::dcerpc::dcerpc::DCERPC_TYPE_REQUEST;
 use crate::dcerpc::detect::{DCEIfaceData, DCEOpnumData, DETECT_DCE_OPNUM_RANGE_UNINITIALIZED};
 use crate::detect::uint::detect_match_uint;
@@ -26,44 +27,44 @@ use std::ptr;
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSmbTxGetShare(
-    tx: &SMBTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SMBTransaction);
     if let Some(SMBTransactionTypeData::TREECONNECT(ref x)) = tx.type_data {
         SCLogDebug!("is_pipe {}", x.is_pipe);
         if !x.is_pipe {
-            *buffer = x.share_name.as_ptr();
-            *buffer_len = x.share_name.len() as u32;
-            return 1;
+            *buf = x.share_name.as_ptr();
+            *len = x.share_name.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-    return 0;
+    return false;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSmbTxGetNamedPipe(
-    tx: &SMBTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SMBTransaction);
     if let Some(SMBTransactionTypeData::TREECONNECT(ref x)) = tx.type_data {
         SCLogDebug!("is_pipe {}", x.is_pipe);
         if x.is_pipe {
-            *buffer = x.share_name.as_ptr();
-            *buffer_len = x.share_name.len() as u32;
-            return 1;
+            *buf = x.share_name.as_ptr();
+            *len = x.share_name.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-    return 0;
+    return false;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSmbTxGetStubData(
-    tx: &SMBTransaction, direction: u8, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, direction: u8, buffer: *mut *const u8,
+    buffer_len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SMBTransaction);
     if let Some(SMBTransactionTypeData::DCERPC(ref x)) = tx.type_data {
         let vref = if direction == Direction::ToServer as u8 {
             &x.stub_data_ts
@@ -73,19 +74,17 @@ pub unsafe extern "C" fn SCSmbTxGetStubData(
         if !vref.is_empty() {
             *buffer = vref.as_ptr();
             *buffer_len = vref.len() as u32;
-            return 1;
+            return true;
         }
     }
 
     *buffer = ptr::null();
     *buffer_len = 0;
-    return 0;
+    return false;
 }
 
 #[no_mangle]
-pub extern "C" fn SCSmbTxMatchDceOpnum(
-    tx: &SMBTransaction, dce_data: &mut DCEOpnumData,
-) -> u8 {
+pub extern "C" fn SCSmbTxMatchDceOpnum(tx: &SMBTransaction, dce_data: &mut DCEOpnumData) -> u8 {
     SCLogDebug!("SCSmbTxMatchDceOpnum: start");
     if let Some(SMBTransactionTypeData::DCERPC(ref x)) = tx.type_data {
         if x.req_cmd == DCERPC_TYPE_REQUEST {
@@ -152,36 +151,34 @@ pub extern "C" fn SCSmbTxGetDceIface(
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSmbTxGetNtlmsspUser(
-    tx: &SMBTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SMBTransaction);
     if let Some(SMBTransactionTypeData::SESSIONSETUP(ref x)) = tx.type_data {
         if let Some(ref ntlmssp) = x.ntlmssp {
-            *buffer = ntlmssp.user.as_ptr();
-            *buffer_len = ntlmssp.user.len() as u32;
-            return 1;
+            *buf = ntlmssp.user.as_ptr();
+            *len = ntlmssp.user.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-    return 0;
+    return false;
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn SCSmbTxGetNtlmsspDomain(
-    tx: &SMBTransaction, buffer: *mut *const u8, buffer_len: *mut u32,
-) -> u8 {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, _flags: u8, buf: *mut *const u8,
+    len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, SMBTransaction);
     if let Some(SMBTransactionTypeData::SESSIONSETUP(ref x)) = tx.type_data {
         if let Some(ref ntlmssp) = x.ntlmssp {
-            *buffer = ntlmssp.domain.as_ptr();
-            *buffer_len = ntlmssp.domain.len() as u32;
-            return 1;
+            *buf = ntlmssp.domain.as_ptr();
+            *len = ntlmssp.domain.len() as u32;
+            return true;
         }
     }
-
-    *buffer = ptr::null();
-    *buffer_len = 0;
-    return 0;
+    return false;
 }
 
 #[no_mangle]

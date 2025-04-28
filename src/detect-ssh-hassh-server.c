@@ -57,34 +57,6 @@
 #define BUFFER_DESC "Ssh Client Fingerprinting For Ssh Servers"
 static int g_ssh_hassh_buffer_id = 0;
 
-
-static InspectionBuffer *GetSshData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-
-    if (buffer->inspect == NULL) {
-        const uint8_t *hasshServer = NULL;
-        uint32_t b_len = 0;
-
-        if (SCSshTxGetHassh(txv, &hasshServer, &b_len, flow_flags) != 1)
-            return NULL;
-        if (hasshServer == NULL || b_len == 0) {
-            SCLogDebug("SSH hassh not set");
-            return NULL;
-        }
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, hasshServer, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 /**
  * \brief this function setup the ssh.hassh.server modifier keyword used in the rule
  *
@@ -158,9 +130,9 @@ void DetectSshHasshServerRegister(void)
     sigmatch_table[DETECT_SSH_HASSH_SERVER].flags |= SIGMATCH_INFO_STICKY_BUFFER | SIGMATCH_NOOPT;
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            GetSshData, ALPROTO_SSH, SshStateBannerDone);
+            SCSshTxGetHassh, ALPROTO_SSH, SshStateBannerDone);
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SSH, SIG_FLAG_TOCLIENT,
-            SshStateBannerDone, DetectEngineInspectBufferGeneric, GetSshData);
+            SshStateBannerDone, DetectEngineInspectBufferGeneric, SCSshTxGetHassh);
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME, BUFFER_DESC);
 
     g_ssh_hassh_buffer_id = DetectBufferTypeGetByName(BUFFER_NAME);

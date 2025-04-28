@@ -69,26 +69,6 @@ static int DetectNonceSetup(DetectEngineCtx *de_ctx, Signature *s, const char *s
     return 0;
 }
 
-static InspectionBuffer *GetNonceData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCIkeStateGetNonce(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 void DetectIkeNonceRegister(void)
 {
     // register nonce
@@ -100,16 +80,16 @@ void DetectIkeNonceRegister(void)
     sigmatch_table[DETECT_IKE_NONCE].flags |= SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_NONCE, ALPROTO_IKE, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetNonceData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetNonce);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_NONCE, SIG_FLAG_TOSERVER, 1, PrefilterGenericMpmRegister,
-            GetNonceData, ALPROTO_IKE, 1);
+            SCIkeStateGetNonce, ALPROTO_IKE, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_NONCE, ALPROTO_IKE, SIG_FLAG_TOCLIENT, 1,
-            DetectEngineInspectBufferGeneric, GetNonceData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetNonce);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_NONCE, SIG_FLAG_TOCLIENT, 1, PrefilterGenericMpmRegister,
-            GetNonceData, ALPROTO_IKE, 1);
+            SCIkeStateGetNonce, ALPROTO_IKE, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME_NONCE, BUFFER_DESC_NONCE);
 

@@ -65,32 +65,18 @@ static int DetectHttpRequestLineSetup(DetectEngineCtx *, Signature *, const char
 #ifdef UNITTESTS
 static void DetectHttpRequestLineRegisterTests(void);
 #endif
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id);
 static int g_http_request_line_buffer_id = 0;
 
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
 {
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetRequestLine(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
+    htp_tx_t *tx = (htp_tx_t *)txv;
+    if (unlikely(htp_tx_request_line(tx) == NULL)) {
+        return false;
     }
-
-    return buffer;
+    *data_len = bstr_len(htp_tx_request_line(tx));
+    *data = bstr_ptr(htp_tx_request_line(tx));
+    return true;
 }
 
 /**
@@ -117,9 +103,10 @@ void DetectHttpRequestLineRegister(void)
             PrefilterGenericMpmRegister, GetData, ALPROTO_HTTP1, HTP_REQUEST_PROGRESS_LINE);
 
     DetectAppLayerInspectEngineRegister("http_request_line", ALPROTO_HTTP2, SIG_FLAG_TOSERVER,
-            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, GetData2);
+            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, SCHttp2TxGetRequestLine);
     DetectAppLayerMpmRegister("http_request_line", SIG_FLAG_TOSERVER, 2,
-            PrefilterGenericMpmRegister, GetData2, ALPROTO_HTTP2, HTTP2StateDataClient);
+            PrefilterGenericMpmRegister, SCHttp2TxGetRequestLine, ALPROTO_HTTP2,
+            HTTP2StateDataClient);
 
     DetectBufferTypeSetDescriptionByName("http_request_line",
             "http request line");
@@ -149,26 +136,6 @@ static int DetectHttpRequestLineSetup(DetectEngineCtx *de_ctx, Signature *s, con
         return -1;
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-        if (unlikely(htp_tx_request_line(tx) == NULL)) {
-            return NULL;
-        }
-        const uint32_t data_len = bstr_len(htp_tx_request_line(tx));
-        const uint8_t *data = bstr_ptr(htp_tx_request_line(tx));
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-    return buffer;
 }
 
 /************************************Unittests*********************************/

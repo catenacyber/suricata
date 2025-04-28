@@ -66,52 +66,6 @@ static void DetectDceStubDataRegisterTests(void);
 #endif
 static int g_dce_stub_data_buffer_id = 0;
 
-static InspectionBuffer *GetSMBData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t flow_flags,
-        void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (!buffer->initialized) {
-        uint32_t data_len = 0;
-        const uint8_t *data = NULL;
-        uint8_t dir = flow_flags & (STREAM_TOSERVER|STREAM_TOCLIENT);
-        if (SCSmbTxGetStubData(txv, dir, &data, &data_len) != 1)
-            return NULL;
-        SCLogDebug("have data!");
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-    return buffer;
-}
-
-static InspectionBuffer *GetDCEData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t flow_flags,
-        void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (!buffer->initialized) {
-        uint32_t data_len = 0;
-        const uint8_t *data = NULL;
-        uint8_t endianness;
-
-        SCDcerpcGetStubData(txv, &data, &data_len, &endianness, flow_flags);
-        if (data == NULL || data_len == 0)
-            return NULL;
-
-        if (endianness > 0) {
-            buffer->flags = DETECT_CI_FLAGS_DCE_LE;
-        } else {
-            buffer->flags |= DETECT_CI_FLAGS_DCE_BE;
-        }
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-    return buffer;
-}
-
 /**
  * \brief Registers the keyword handlers for the "dce_stub_data" keyword.
  */
@@ -126,22 +80,22 @@ void DetectDceStubDataRegister(void)
     sigmatch_table[DETECT_DCE_STUB_DATA].flags |= SIGMATCH_NOOPT|SIGMATCH_INFO_STICKY_BUFFER;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetSMBData);
+            DetectEngineInspectBufferGeneric, SCSmbTxGetStubData);
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetSMBData, ALPROTO_SMB, 0);
+            SCSmbTxGetStubData, ALPROTO_SMB, 0);
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOCLIENT, 0,
-            DetectEngineInspectBufferGeneric, GetSMBData);
+            DetectEngineInspectBufferGeneric, SCSmbTxGetStubData);
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            GetSMBData, ALPROTO_SMB, 0);
+            SCSmbTxGetStubData, ALPROTO_SMB, 0);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_DCERPC, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetDCEData);
+            DetectEngineInspectBufferGeneric, SCDcerpcGetStubData);
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetDCEData, ALPROTO_DCERPC, 0);
+            SCDcerpcGetStubData, ALPROTO_DCERPC, 0);
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_DCERPC, SIG_FLAG_TOCLIENT, 0,
-            DetectEngineInspectBufferGeneric, GetDCEData);
+            DetectEngineInspectBufferGeneric, SCDcerpcGetStubData);
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOCLIENT, 2, PrefilterGenericMpmRegister,
-            GetDCEData, ALPROTO_DCERPC, 0);
+            SCDcerpcGetStubData, ALPROTO_DCERPC, 0);
 
     g_dce_stub_data_buffer_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }

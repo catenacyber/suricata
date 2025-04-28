@@ -47,21 +47,18 @@ static int DetectSmtpHeloSetup(DetectEngineCtx *de_ctx, Signature *s, const char
     return 0;
 }
 
-static InspectionBuffer *GetSmtpHeloData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetSmtpHeloData(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **data, uint32_t *data_len)
 {
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        SMTPState *smtp_state = (SMTPState *)FlowGetAppState(f);
-        if (smtp_state) {
-            if (smtp_state->helo == NULL || smtp_state->helo_len == 0)
-                return NULL;
-            InspectionBufferSetup(det_ctx, list_id, buffer, smtp_state->helo, smtp_state->helo_len);
-            InspectionBufferApplyTransforms(det_ctx, buffer, transforms);
+    SMTPState *smtp_state = (SMTPState *)txv; // TODO state
+    if (smtp_state) {
+        if (smtp_state->helo != NULL) {
+            *data = smtp_state->helo;
+            *data_len = smtp_state->helo_len;
+            return true;
         }
     }
-    return buffer;
+    return false;
 }
 
 static int DetectSmtpMailFromSetup(DetectEngineCtx *de_ctx, Signature *s, const char *arg)
@@ -75,19 +72,15 @@ static int DetectSmtpMailFromSetup(DetectEngineCtx *de_ctx, Signature *s, const 
     return 0;
 }
 
-static InspectionBuffer *GetSmtpMailFromData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetSmtpMailFromData(DetectEngineThreadCtx *det_ctx, const void *txv,
+        const uint8_t _flow_flags, const uint8_t **data, uint32_t *data_len)
 {
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        SMTPTransaction *tx = (SMTPTransaction *)txv;
-        if (tx->mail_from == NULL || tx->mail_from_len == 0)
-            return NULL;
-        InspectionBufferSetup(det_ctx, list_id, buffer, tx->mail_from, tx->mail_from_len);
-        InspectionBufferApplyTransforms(det_ctx, buffer, transforms);
-    }
-    return buffer;
+    SMTPTransaction *tx = (SMTPTransaction *)txv;
+    if (tx->mail_from == NULL)
+        return false;
+    *data = tx->mail_from;
+    *data_len = tx->mail_from_len;
+    return true;
 }
 
 static int DetectSmtpRcptToSetup(DetectEngineCtx *de_ctx, Signature *s, const char *arg)

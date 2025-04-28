@@ -60,27 +60,19 @@ static int DetectFtpCommandSetup(DetectEngineCtx *de_ctx, Signature *s, const ch
     return 0;
 }
 
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t _flow_flags,
+        const uint8_t **b, uint32_t *b_len)
 {
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        FTPTransaction *tx = (FTPTransaction *)txv;
+    FTPTransaction *tx = (FTPTransaction *)txv;
 
-        if (tx->command_descriptor.command_code == FTP_COMMAND_UNKNOWN)
-            return NULL;
+    if (tx->command_descriptor.command_code == FTP_COMMAND_UNKNOWN)
+        return false;
 
-        const char *b = NULL;
-        uint8_t b_len = 0;
-
-        if (SCGetFtpCommandInfo(tx->command_descriptor.command_index, &b, NULL, &b_len)) {
-            InspectionBufferSetupAndApplyTransforms(
-                    det_ctx, list_id, buffer, (const uint8_t *)b, b_len, transforms);
-        }
-    }
-
-    return buffer;
+    uint8_t b8_len = 0;
+    bool r = SCGetFtpCommandInfo(
+            tx->command_descriptor.command_index, (const char **)b, NULL, &b8_len);
+    *b_len = b8_len;
+    return r;
 }
 
 void DetectFtpCommandRegister(void)

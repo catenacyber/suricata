@@ -69,12 +69,19 @@ static int DetectHttpStatCodeSetupSticky(DetectEngineCtx *de_ctx, Signature *s, 
 static void DetectHttpStatCodeRegisterTests(void);
 #endif
 static int g_http_stat_code_buffer_id = 0;
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id);
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    htp_tx_t *tx = (htp_tx_t *)txv;
+
+    if (htp_tx_response_status(tx) == NULL)
+        return false;
+
+    *data_len = bstr_len(htp_tx_response_status(tx));
+    *data = bstr_ptr(htp_tx_response_status(tx));
+    return true;
+}
 
 /**
  * \brief Registration function for keyword: http_stat_code
@@ -108,10 +115,10 @@ void DetectHttpStatCodeRegister (void)
             GetData, ALPROTO_HTTP1, HTP_RESPONSE_PROGRESS_LINE);
 
     DetectAppLayerInspectEngineRegister("http_stat_code", ALPROTO_HTTP2, SIG_FLAG_TOCLIENT,
-            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, GetData2);
+            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, SCHttp2TxGetStatus);
 
     DetectAppLayerMpmRegister("http_stat_code", SIG_FLAG_TOCLIENT, 4, PrefilterGenericMpmRegister,
-            GetData2, ALPROTO_HTTP2, HTTP2StateDataServer);
+            SCHttp2TxGetStatus, ALPROTO_HTTP2, HTTP2StateDataServer);
 
     DetectBufferTypeSetDescriptionByName("http_stat_code",
             "http response status code");
@@ -152,51 +159,6 @@ static int DetectHttpStatCodeSetupSticky(DetectEngineCtx *de_ctx, Signature *s, 
     if (DetectSignatureSetAppProto(s, ALPROTO_HTTP) < 0)
         return -1;
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-
-        if (htp_tx_response_status(tx) == NULL)
-            return NULL;
-
-        const uint32_t data_len = bstr_len(htp_tx_response_status(tx));
-        const uint8_t *data = bstr_ptr(htp_tx_response_status(tx));
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
-}
-
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetStatus(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
 }
 
 #ifdef UNITTESTS

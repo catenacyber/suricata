@@ -29,6 +29,7 @@ use std;
 use std::cmp;
 use std::ffi::CString;
 use std::collections::VecDeque;
+use std::os::raw::c_void;
 use crate::conf::conf_get;
 
 // Constant DCERPC UDP Header length
@@ -1121,8 +1122,9 @@ unsafe extern "C" fn get_tx_data(
 
 #[no_mangle]
 pub unsafe extern "C" fn SCDcerpcGetStubData(
-    tx: &mut DCERPCTransaction, buf: *mut *const u8, len: *mut u32, endianness: *mut u8, dir: u8,
-) {
+    _de: *mut DetectEngineThreadCtx, tx: *const c_void, dir: u8, buf: *mut *const u8, len: *mut u32,
+) -> bool {
+    let tx = cast_pointer!(tx, DCERPCTransaction);
     match dir.into() {
         Direction::ToServer => {
             *len = tx.stub_data_buffer_ts.len() as u32;
@@ -1135,7 +1137,8 @@ pub unsafe extern "C" fn SCDcerpcGetStubData(
             SCLogDebug!("DCERPC Response stub buffer: Setting buffer to: {:?}", *buf);
         }
     }
-    *endianness = tx.get_endianness();
+    //TODO *endianness = tx.get_endianness();
+    return true;
 }
 
 /// Probe input to see if it looks like DCERPC.

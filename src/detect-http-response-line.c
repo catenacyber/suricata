@@ -65,32 +65,18 @@ static int DetectHttpResponseLineSetup(DetectEngineCtx *, Signature *, const cha
 #ifdef UNITTESTS
 static void DetectHttpResponseLineRegisterTests(void);
 #endif
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id);
 static int g_http_response_line_id = 0;
 
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
 {
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetResponseLine(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
+    htp_tx_t *tx = (htp_tx_t *)txv;
+    if (unlikely(htp_tx_response_line(tx) == NULL)) {
+        return false;
     }
-
-    return buffer;
+    *data_len = bstr_len(htp_tx_response_line(tx));
+    *data = bstr_ptr(htp_tx_response_line(tx));
+    return true;
 }
 
 /**
@@ -116,9 +102,10 @@ void DetectHttpResponseLineRegister(void)
             PrefilterGenericMpmRegister, GetData, ALPROTO_HTTP1, HTP_RESPONSE_PROGRESS_LINE);
 
     DetectAppLayerInspectEngineRegister("http_response_line", ALPROTO_HTTP2, SIG_FLAG_TOCLIENT,
-            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, GetData2);
+            HTTP2StateDataServer, DetectEngineInspectBufferGeneric, SCHttp2TxGetResponseLine);
     DetectAppLayerMpmRegister("http_response_line", SIG_FLAG_TOCLIENT, 2,
-            PrefilterGenericMpmRegister, GetData2, ALPROTO_HTTP2, HTTP2StateDataServer);
+            PrefilterGenericMpmRegister, SCHttp2TxGetResponseLine, ALPROTO_HTTP2,
+            HTTP2StateDataServer);
 
     DetectBufferTypeSetDescriptionByName("http_response_line",
             "http response line");
@@ -148,26 +135,6 @@ static int DetectHttpResponseLineSetup(DetectEngineCtx *de_ctx, Signature *s, co
         return -1;
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-        if (unlikely(htp_tx_response_line(tx) == NULL)) {
-            return NULL;
-        }
-        const uint32_t data_len = bstr_len(htp_tx_response_line(tx));
-        const uint8_t *data = bstr_ptr(htp_tx_response_line(tx));
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-    return buffer;
 }
 
 /************************************Unittests*********************************/

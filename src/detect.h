@@ -418,11 +418,8 @@ typedef struct DetectEngineTransforms {
 } DetectEngineTransforms;
 
 /** callback for getting the buffer we need to prefilter/inspect */
-typedef InspectionBuffer *(*InspectionBufferGetDataPtr)(
-        struct DetectEngineThreadCtx_ *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *f, const uint8_t flow_flags,
-        void *txv, const int list_id);
+typedef bool (*InspectionBufferGetDataPtr)(struct DetectEngineThreadCtx_ *det_ctx, const void *txv,
+        const uint8_t flow_flags, const uint8_t **buf, uint32_t *buf_len);
 
 typedef bool (*InspectionMultiBufferGetDataPtr)(struct DetectEngineThreadCtx_ *det_ctx,
         const void *txv, const uint8_t flow_flags, uint32_t local_id, const uint8_t **buf,

@@ -86,46 +86,6 @@ static int DetectSpiResponderSetup(DetectEngineCtx *de_ctx, Signature *s, const 
     return 0;
 }
 
-static InspectionBuffer *GetInitiatorData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCIkeStateGetSpiInitiator(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
-static InspectionBuffer *GetResponderData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const uint8_t *b = NULL;
-        uint32_t b_len = 0;
-
-        if (SCIkeStateGetSpiResponder(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
-}
-
 void DetectIkeSpiRegister(void)
 {
     // register initiator
@@ -137,10 +97,10 @@ void DetectIkeSpiRegister(void)
     sigmatch_table[DETECT_IKE_SPI_INITIATOR].flags |= SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_INITIATOR, ALPROTO_IKE, SIG_FLAG_TOSERVER, 1,
-            DetectEngineInspectBufferGeneric, GetInitiatorData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetSpiInitiator);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_INITIATOR, SIG_FLAG_TOSERVER, 1,
-            PrefilterGenericMpmRegister, GetInitiatorData, ALPROTO_IKE, 1);
+            PrefilterGenericMpmRegister, SCIkeStateGetSpiInitiator, ALPROTO_IKE, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME_INITIATOR, BUFFER_DESC_INITIATOR);
 
@@ -156,10 +116,10 @@ void DetectIkeSpiRegister(void)
     sigmatch_table[DETECT_IKE_SPI_RESPONDER].flags |= SIGMATCH_NOOPT | SIGMATCH_INFO_STICKY_BUFFER;
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME_RESPONDER, ALPROTO_IKE, SIG_FLAG_TOCLIENT, 1,
-            DetectEngineInspectBufferGeneric, GetResponderData);
+            DetectEngineInspectBufferGeneric, SCIkeStateGetSpiResponder);
 
     DetectAppLayerMpmRegister(BUFFER_NAME_RESPONDER, SIG_FLAG_TOCLIENT, 1,
-            PrefilterGenericMpmRegister, GetResponderData, ALPROTO_IKE, 1);
+            PrefilterGenericMpmRegister, SCIkeStateGetSpiResponder, ALPROTO_IKE, 1);
 
     DetectBufferTypeSetDescriptionByName(BUFFER_NAME_RESPONDER, BUFFER_DESC_RESPONDER);
 

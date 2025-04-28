@@ -82,50 +82,37 @@ static int DetectHttpProtocolSetup(DetectEngineCtx *de_ctx, Signature *s, const 
     return 0;
 }
 
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t flow_flags, void *txv, const int list_id)
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
 {
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const bstr *str = NULL;
-        htp_tx_t *tx = (htp_tx_t *)txv;
+    const bstr *str = NULL;
+    htp_tx_t *tx = (htp_tx_t *)txv;
 
-        if (flow_flags & STREAM_TOSERVER)
-            str = htp_tx_request_protocol(tx);
-        else if (flow_flags & STREAM_TOCLIENT)
-            str = htp_tx_response_protocol(tx);
+    if (flow_flags & STREAM_TOSERVER)
+        str = htp_tx_request_protocol(tx);
+    else if (flow_flags & STREAM_TOCLIENT)
+        str = htp_tx_response_protocol(tx);
 
-        if (str == NULL) {
-            SCLogDebug("HTTP protocol not set");
-            return NULL;
-        }
-
-        uint32_t data_len = bstr_size(str);
-        uint8_t *data = bstr_ptr(str);
-        if (data == NULL || data_len == 0) {
-            SCLogDebug("HTTP protocol not present");
-            return NULL;
-        }
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
+    if (str == NULL) {
+        SCLogDebug("HTTP protocol not set");
+        return false;
     }
 
-    return buffer;
+    *data_len = bstr_size(str);
+    *data = bstr_ptr(str);
+    if (*data == NULL || data_len == 0) {
+        SCLogDebug("HTTP protocol not present");
+        return false;
+    }
+    return true;
 }
 
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
+static bool GetData2(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t _flow_flags,
+        const uint8_t **data, uint32_t *data_len)
 {
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, (const uint8_t *)"HTTP/2", strlen("HTTP/2"), transforms);
-    }
-
-    return buffer;
+    *data = (const uint8_t *)"HTTP/2";
+    *data_len = strlen("HTTP/2");
+    return true;
 }
 
 static bool DetectHttpProtocolValidateCallback(

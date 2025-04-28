@@ -66,13 +66,25 @@ static void DetectHttpUARegisterTests(void);
 #endif
 static int g_http_ua_buffer_id = 0;
 static int DetectHttpUserAgentSetup(DetectEngineCtx *, Signature *, const char *);
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *_f, const uint8_t _flow_flags,
-        void *txv, const int list_id);
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id);
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    htp_tx_t *tx = (htp_tx_t *)txv;
+
+    if (htp_tx_request_headers(tx) == NULL)
+        return false;
+
+    const htp_header_t *h = htp_tx_request_header(tx, "User-Agent");
+    if (h == NULL || htp_header_value(h) == NULL) {
+        SCLogDebug("HTTP UA header not present in this request");
+        return false;
+    }
+
+    *data_len = htp_header_value_len(h);
+    *data = htp_header_value_ptr(h);
+    return true;
+}
 
 /**
  * \brief Registers the keyword handlers for the "http_user_agent" keyword.
@@ -107,10 +119,10 @@ void DetectHttpUARegister(void)
             GetData, ALPROTO_HTTP1, HTP_REQUEST_PROGRESS_HEADERS);
 
     DetectAppLayerInspectEngineRegister("http_user_agent", ALPROTO_HTTP2, SIG_FLAG_TOSERVER,
-            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, GetData2);
+            HTTP2StateDataClient, DetectEngineInspectBufferGeneric, SCHttp2TxGetUserAgent);
 
     DetectAppLayerMpmRegister("http_user_agent", SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetData2, ALPROTO_HTTP2, HTTP2StateDataClient);
+            SCHttp2TxGetUserAgent, ALPROTO_HTTP2, HTTP2StateDataClient);
 
     DetectBufferTypeSetDescriptionByName("http_user_agent",
             "http user agent");
@@ -153,55 +165,6 @@ static int DetectHttpUserAgentSetup(DetectEngineCtx *de_ctx, Signature *s, const
     if (DetectSignatureSetAppProto(s, ALPROTO_HTTP) < 0)
         return -1;
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f,
-        const uint8_t _flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        htp_tx_t *tx = (htp_tx_t *)txv;
-
-        if (htp_tx_request_headers(tx) == NULL)
-            return NULL;
-
-        const htp_header_t *h = htp_tx_request_header(tx, "User-Agent");
-        if (h == NULL || htp_header_value(h) == NULL) {
-            SCLogDebug("HTTP UA header not present in this request");
-            return NULL;
-        }
-
-        const uint32_t data_len = htp_header_value_len(h);
-        const uint8_t *data = htp_header_value_ptr(h);
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
-}
-
-static InspectionBuffer *GetData2(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    SCEnter();
-
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCHttp2TxGetUserAgent(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-
-    return buffer;
 }
 
 #ifdef UNITTESTS

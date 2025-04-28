@@ -1521,8 +1521,8 @@ static void PrefilterMpm(DetectEngineThreadCtx *det_ctx, const void *pectx, Pack
     const MpmCtx *mpm_ctx = ctx->mpm_ctx;
     SCLogDebug("running on list %d", ctx->list_id);
 
-    InspectionBuffer *buffer = ctx->GetData(det_ctx, ctx->transforms,
-            f, flags, txv, ctx->list_id);
+    InspectionBuffer *buffer = DetectGetSingleData(
+            det_ctx, ctx->transforms, f, flags, txv, ctx->list_id, ctx->GetData);
     if (buffer == NULL)
         return;
 

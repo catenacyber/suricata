@@ -57,11 +57,27 @@ static int DetectTlsIssuerSetup(DetectEngineCtx *, Signature *, const char *);
 #ifdef UNITTESTS
 static void DetectTlsIssuerRegisterTests(void);
 #endif
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms,
-        Flow *f, const uint8_t flow_flags,
-        void *txv, const int list_id);
 static int g_tls_cert_issuer_buffer_id = 0;
+
+static bool GetData(DetectEngineThreadCtx *det_ctx, const void *txv, const uint8_t flow_flags,
+        const uint8_t **data, uint32_t *data_len)
+{
+    const SSLState *ssl_state = (SSLState *)txv;
+    const SSLStateConnp *connp;
+    if (flow_flags & STREAM_TOSERVER) {
+        connp = &ssl_state->client_connp;
+    } else {
+        connp = &ssl_state->server_connp;
+    }
+
+    if (connp->cert0_issuerdn == NULL) {
+        return false;
+    }
+
+    *data_len = strlen(connp->cert0_issuerdn);
+    *data = (uint8_t *)connp->cert0_issuerdn;
+    return true;
+}
 
 /**
  * \brief Registration function for keyword: tls.cert_issuer
@@ -118,34 +134,6 @@ static int DetectTlsIssuerSetup(DetectEngineCtx *de_ctx, Signature *s, const cha
         return -1;
 
     return 0;
-}
-
-static InspectionBuffer *GetData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *f,
-        const uint8_t flow_flags, void *txv, const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        const SSLState *ssl_state = (SSLState *)f->alstate;
-        const SSLStateConnp *connp;
-        if (flow_flags & STREAM_TOSERVER) {
-            connp = &ssl_state->client_connp;
-        } else {
-            connp = &ssl_state->server_connp;
-        }
-
-        if (connp->cert0_issuerdn == NULL) {
-            return NULL;
-        }
-
-        const uint32_t data_len = strlen(connp->cert0_issuerdn);
-        const uint8_t *data = (uint8_t *)connp->cert0_issuerdn;
-
-        InspectionBufferSetupAndApplyTransforms(
-                det_ctx, list_id, buffer, data, data_len, transforms);
-    }
-
-    return buffer;
 }
 
 #ifdef UNITTESTS

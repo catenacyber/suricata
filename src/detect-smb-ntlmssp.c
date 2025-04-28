@@ -55,25 +55,6 @@ static int DetectSmbNtlmsspUserSetup(DetectEngineCtx *de_ctx, Signature *s, cons
     return 0;
 }
 
-static InspectionBuffer *GetNtlmsspUserData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCSmbTxGetNtlmsspUser(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 void DetectSmbNtlmsspUserRegister(void)
 {
     sigmatch_table[KEYWORD_ID].name = KEYWORD_NAME;
@@ -82,10 +63,10 @@ void DetectSmbNtlmsspUserRegister(void)
     sigmatch_table[KEYWORD_ID].desc = "sticky buffer to match on SMB ntlmssp user in session setup";
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetNtlmsspUserData, ALPROTO_SMB, 1);
+            SCSmbTxGetNtlmsspUser, ALPROTO_SMB, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetNtlmsspUserData);
+            DetectEngineInspectBufferGeneric, SCSmbTxGetNtlmsspUser);
 
     g_smb_nltmssp_user_buffer_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }
@@ -111,25 +92,6 @@ static int DetectSmbNtlmsspDomainSetup(DetectEngineCtx *de_ctx, Signature *s, co
     return 0;
 }
 
-static InspectionBuffer *GetNtlmsspDomainData(DetectEngineThreadCtx *det_ctx,
-        const DetectEngineTransforms *transforms, Flow *_f, const uint8_t _flow_flags, void *txv,
-        const int list_id)
-{
-    InspectionBuffer *buffer = InspectionBufferGet(det_ctx, list_id);
-    if (buffer->inspect == NULL) {
-        uint32_t b_len = 0;
-        const uint8_t *b = NULL;
-
-        if (SCSmbTxGetNtlmsspDomain(txv, &b, &b_len) != 1)
-            return NULL;
-        if (b == NULL || b_len == 0)
-            return NULL;
-
-        InspectionBufferSetupAndApplyTransforms(det_ctx, list_id, buffer, b, b_len, transforms);
-    }
-    return buffer;
-}
-
 void DetectSmbNtlmsspDomainRegister(void)
 {
     sigmatch_table[KEYWORD_ID].name = KEYWORD_NAME;
@@ -139,10 +101,10 @@ void DetectSmbNtlmsspDomainRegister(void)
             "sticky buffer to match on SMB ntlmssp domain in session setup";
 
     DetectAppLayerMpmRegister(BUFFER_NAME, SIG_FLAG_TOSERVER, 2, PrefilterGenericMpmRegister,
-            GetNtlmsspDomainData, ALPROTO_SMB, 1);
+            SCSmbTxGetNtlmsspDomain, ALPROTO_SMB, 1);
 
     DetectAppLayerInspectEngineRegister(BUFFER_NAME, ALPROTO_SMB, SIG_FLAG_TOSERVER, 0,
-            DetectEngineInspectBufferGeneric, GetNtlmsspDomainData);
+            DetectEngineInspectBufferGeneric, SCSmbTxGetNtlmsspDomain);
 
     g_smb_nltmssp_domain_buffer_id = DetectBufferTypeGetByName(BUFFER_NAME);
 }
