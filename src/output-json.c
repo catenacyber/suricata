@@ -908,7 +908,9 @@ SCJsonBuilder *CreateEveHeader(const Packet *p, enum SCOutputJsonLogDirection di
     } else if (PacketIsIPv6(p)) {
         SCJbSetUint(js, "ip_v", 6);
     }
-
+    if (f->tunnel_id > 0 && f->tunnel_id != PKT_TUNNEL_UNKNOWN) {
+        SCJbSetUint(js, "tunnel_id", f->tunnel_id);
+    }
     /* icmp */
     switch (p->proto) {
         case IPPROTO_ICMP:
