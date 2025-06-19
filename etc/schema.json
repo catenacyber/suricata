@@ -1123,7 +1123,7 @@
                     "desription":
                             "DNS fields grouped by type: alternative format, no direct keywords",
                     "suricata": {
-                        "no_keywords": true
+                        "keywords": false
                     }
                 },
                 "id": {
@@ -1258,7 +1258,7 @@
                     "type": "integer",
                     "description": "The version of this EVE DNS event",
                     "suricata": {
-                        "no_keywords": true
+                        "keywords": false
                     }
                 },
                 "z": {
@@ -1341,7 +1341,7 @@
                 }
             },
             "suricata": {
-                "no_keywords": true
+                "keywords": false
             }
         },
         "email": {
@@ -2440,7 +2440,7 @@
                     "type": "string",
                     "description": "Encryption used (only in AS-REP and TGS-REP)",
                     "suricata": {
-                        "keywords": []
+                        "keywords": false
                     }
                 },
                 "error_code": {
@@ -2456,7 +2456,7 @@
                     "type": "string",
                     "description": "The request type for which the response had an error_code",
                     "suricata": {
-                        "keywords": []
+                        "keywords": false
                     }
                 },
                 "msg_type": {
@@ -2472,7 +2472,7 @@
                     "type": "string",
                     "description": "The server Realm",
                     "suricata": {
-                        "keywords": []
+                        "keywords": false
                     }
                 },
                 "sname": {
@@ -2506,7 +2506,7 @@
                     "type": "boolean",
                     "description": "Whether the encryption used in AS-REP or TGS-REP is a weak cipher",
                     "suricata": {
-                        "keywords": []
+                        "keywords": false
                     }
                 }
             },
@@ -7045,7 +7045,7 @@
             },
             "optional": true,
             "suricata": {
-                "no_keywords": true
+                "keywords": false
             }
         },
         "stream": {
