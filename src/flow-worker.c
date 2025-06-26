@@ -554,8 +554,11 @@ static void PacketAppUpdate2FlowFlags(Packet *p)
     }
 }
 
+bool packet_path = false;
+
 static TmEcode FlowWorker(ThreadVars *tv, Packet *p, void *data)
 {
+    packet_path = true;
     FlowWorkerThreadData *fw = data;
     DetectEngineThreadCtx *det_ctx = SC_ATOMIC_GET(fw->detect_thread);
 
@@ -570,6 +573,7 @@ static TmEcode FlowWorker(ThreadVars *tv, Packet *p, void *data)
         /* Ack if a flush was requested */
         bool notset = false;
         SC_ATOMIC_CAS(&fw->flush_ack, notset, true);
+        packet_path = false;
         return TM_ECODE_OK;
     }
 
@@ -734,6 +738,7 @@ housekeeping:
     /* process local work queue */
     FlowWorkerProcessLocalFlows(tv, fw, p);
 
+    packet_path = false;
     return TM_ECODE_OK;
 }
 
