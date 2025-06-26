@@ -206,21 +206,21 @@ void PoolThreadReturn(PoolThread *pt, void *data)
 
 void PoolThreadLock(PoolThread *pt, PoolThreadId id)
 {
-    BUG_ON(pt == NULL || id >= pt->size);
+    DEBUG_VALIDATE_BUG_ON(pt == NULL || id >= pt->size);
     PoolThreadElement *e = &pt->array[id];
     SCMutexLock(&e->lock);
 }
 
 void PoolThreadReturnRaw(PoolThread *pt, PoolThreadId id, void *data)
 {
-    BUG_ON(pt == NULL || id >= pt->size);
+    DEBUG_VALIDATE_BUG_ON(pt == NULL || id >= pt->size);
     PoolThreadElement *e = &pt->array[id];
     PoolReturn(e->pool, data);
 }
 
 void PoolThreadUnlock(PoolThread *pt, PoolThreadId id)
 {
-    BUG_ON(pt == NULL || id >= pt->size);
+    DEBUG_VALIDATE_BUG_ON(pt == NULL || id >= pt->size);
     PoolThreadElement *e = &pt->array[id];
     SCMutexUnlock(&e->lock);
 }
