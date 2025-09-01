@@ -202,7 +202,8 @@ void DetectAppLayerMpmRegisterByParentId(DetectEngineCtx *de_ctx,
             am->next = t->next;
             if (transforms) {
                 memcpy(&am->transforms, transforms, sizeof(*transforms));
-
+            }
+            if (transforms && sizeof(am->pname) > strlen(am->name) + 3) {
                 /* create comma separated string of the names of the
                  * transforms and then shorten it if necessary. Finally
                  * use it to construct the 'profile' name for the engine */
