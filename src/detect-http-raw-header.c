@@ -306,7 +306,8 @@ static int PrefilterMpmHttpHeaderRawRequestRegister(DetectEngineCtx *de_ctx, Sig
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpHeaderRaw, mpm_reg->app_v2.alproto,
-            HTP_REQUEST_PROGRESS_HEADERS + 1, pectx, PrefilterMpmHttpHeaderRawFree, mpm_reg->pname);
+            HTP_REQUEST_PROGRESS_HEADERS + 1, pectx, PrefilterMpmHttpHeaderRawFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
         return r;
@@ -321,7 +322,8 @@ static int PrefilterMpmHttpHeaderRawRequestRegister(DetectEngineCtx *de_ctx, Sig
     pectx->transforms = &mpm_reg->transforms;
 
     r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpTrailerRaw, mpm_reg->app_v2.alproto,
-            HTP_REQUEST_PROGRESS_TRAILER + 1, pectx, PrefilterMpmHttpHeaderRawFree, mpm_reg->pname);
+            HTP_REQUEST_PROGRESS_TRAILER + 1, pectx, PrefilterMpmHttpHeaderRawFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }
@@ -342,7 +344,8 @@ static int PrefilterMpmHttpHeaderRawResponseRegister(DetectEngineCtx *de_ctx, Si
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpHeaderRaw, mpm_reg->app_v2.alproto,
-            HTP_RESPONSE_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderRawFree, mpm_reg->pname);
+            HTP_RESPONSE_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderRawFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
         return r;
@@ -357,7 +360,8 @@ static int PrefilterMpmHttpHeaderRawResponseRegister(DetectEngineCtx *de_ctx, Si
     pectx->transforms = &mpm_reg->transforms;
 
     r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpTrailerRaw, mpm_reg->app_v2.alproto,
-            HTP_RESPONSE_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderRawFree, mpm_reg->pname);
+            HTP_RESPONSE_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderRawFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }

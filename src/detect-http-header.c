@@ -302,7 +302,8 @@ static int PrefilterMpmHttpHeaderRequestRegister(DetectEngineCtx *de_ctx, SigGro
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpHeader, mpm_reg->app_v2.alproto,
-            HTP_REQUEST_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderFree, mpm_reg->pname);
+            HTP_REQUEST_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
         return r;
@@ -317,7 +318,8 @@ static int PrefilterMpmHttpHeaderRequestRegister(DetectEngineCtx *de_ctx, SigGro
     pectx->transforms = &mpm_reg->transforms;
 
     r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpTrailer, mpm_reg->app_v2.alproto,
-            HTP_REQUEST_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderFree, mpm_reg->pname);
+            HTP_REQUEST_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }
@@ -338,7 +340,8 @@ static int PrefilterMpmHttpHeaderResponseRegister(DetectEngineCtx *de_ctx, SigGr
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpHeader, mpm_reg->app_v2.alproto,
-            HTP_RESPONSE_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderFree, mpm_reg->pname);
+            HTP_RESPONSE_PROGRESS_HEADERS, pectx, PrefilterMpmHttpHeaderFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
         return r;
@@ -353,7 +356,8 @@ static int PrefilterMpmHttpHeaderResponseRegister(DetectEngineCtx *de_ctx, SigGr
     pectx->transforms = &mpm_reg->transforms;
 
     r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmHttpTrailer, mpm_reg->app_v2.alproto,
-            HTP_RESPONSE_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderFree, mpm_reg->pname);
+            HTP_RESPONSE_PROGRESS_TRAILER, pectx, PrefilterMpmHttpHeaderFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }

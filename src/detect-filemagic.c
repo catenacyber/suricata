@@ -405,9 +405,9 @@ static int PrefilterMpmFilemagicRegister(DetectEngineCtx *de_ctx, SigGroupHead *
     pectx->mpm_ctx = mpm_ctx;
     pectx->transforms = &mpm_reg->transforms;
 
-    return PrefilterAppendTxEngine(de_ctx, sgh, PrefilterTxFilemagic,
-            mpm_reg->app_v2.alproto, mpm_reg->app_v2.tx_min_progress,
-            pectx, PrefilterMpmFilemagicFree, mpm_reg->pname);
+    return PrefilterAppendTxEngine(de_ctx, sgh, PrefilterTxFilemagic, mpm_reg->app_v2.alproto,
+            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterMpmFilemagicFree,
+            PREFILTER_PROF_NAME(mpm_reg));
 }
 
 #endif /* HAVE_MAGIC */

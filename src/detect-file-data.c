@@ -590,9 +590,9 @@ int PrefilterMpmFiledataRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh, Mpm
     pectx->mpm_ctx = mpm_ctx;
     pectx->transforms = &mpm_reg->transforms;
 
-    return PrefilterAppendTxEngine(de_ctx, sgh, PrefilterTxFiledata,
-            mpm_reg->app_v2.alproto, mpm_reg->app_v2.tx_min_progress,
-            pectx, PrefilterMpmFiledataFree, mpm_reg->pname);
+    return PrefilterAppendTxEngine(de_ctx, sgh, PrefilterTxFiledata, mpm_reg->app_v2.alproto,
+            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterMpmFiledataFree,
+            PREFILTER_PROF_NAME(mpm_reg));
 }
 
 #ifdef UNITTESTS

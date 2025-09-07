@@ -218,7 +218,7 @@ int PrefilterGenericMpmFrameRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendFrameEngine(de_ctx, sgh, PrefilterMpmFrame, mpm_reg->frame_v1.alproto,
-            mpm_reg->frame_v1.type, pectx, PrefilterMpmFrameFree, mpm_reg->pname);
+            mpm_reg->frame_v1.type, pectx, PrefilterMpmFrameFree, PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }

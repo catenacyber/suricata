@@ -114,7 +114,9 @@ static void RegisterInternal(const char *name, int direction, int priority,
     DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
     BUG_ON(am == NULL);
     am->name = name;
+#ifdef PROFILING
     snprintf(am->pname, sizeof(am->pname), "%s", am->name);
+#endif
     am->direction = direction;
     DEBUG_VALIDATE_BUG_ON(sm_list < 0 || sm_list > INT16_MAX);
     am->sm_list = (int16_t)sm_list;
@@ -203,6 +205,7 @@ void DetectAppLayerMpmRegisterByParentId(DetectEngineCtx *de_ctx,
             if (transforms) {
                 memcpy(&am->transforms, transforms, sizeof(*transforms));
             }
+#ifdef PROFILING
             if (transforms && sizeof(am->pname) > strlen(am->name) + 3) {
                 /* create comma separated string of the names of the
                  * transforms and then shorten it if necessary. Finally
@@ -230,6 +233,7 @@ void DetectAppLayerMpmRegisterByParentId(DetectEngineCtx *de_ctx,
                 (void)snprintf(am->pname, sizeof(am->pname), "%s#%d",
                         am->name, id);
             }
+#endif
             am->id = de_ctx->app_mpms_list_cnt++;
 
             DetectEngineRegisterFastPatternForId(de_ctx, am->sm_list, am->priority);
@@ -337,7 +341,9 @@ void DetectFrameMpmRegister(const char *name, int direction, int priority,
     DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
     BUG_ON(am == NULL);
     am->name = name;
+#ifdef PROFILING
     snprintf(am->pname, sizeof(am->pname), "%s", am->name);
+#endif
     am->sm_list = (uint16_t)sm_list;
     am->direction = direction;
     am->priority = priority;
@@ -377,7 +383,9 @@ void DetectFrameMpmRegisterByParentId(DetectEngineCtx *de_ctx, const int id, con
             DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
             BUG_ON(am == NULL);
             am->name = t->name;
+#ifdef PROFILING
             snprintf(am->pname, sizeof(am->pname), "%s#%d", am->name, id);
+#endif
             DEBUG_VALIDATE_BUG_ON(id < 0 || id > UINT16_MAX);
             am->sm_list = (uint16_t)id; // use new id
             am->sm_list_base = t->sm_list;
@@ -426,7 +434,9 @@ void DetectEngineFrameMpmRegister(DetectEngineCtx *de_ctx, const char *name, int
     DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
     BUG_ON(am == NULL);
     am->name = name;
+#ifdef PROFILING
     snprintf(am->pname, sizeof(am->pname), "%s", am->name);
+#endif
     am->sm_list = (uint16_t)sm_list;
     am->direction = direction;
     am->priority = priority;
@@ -569,7 +579,9 @@ void DetectPktMpmRegister(const char *name, int priority,
     DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
     BUG_ON(am == NULL);
     am->name = name;
+#ifdef PROFILING
     snprintf(am->pname, sizeof(am->pname), "%s", am->name);
+#endif
     DEBUG_VALIDATE_BUG_ON(sm_list < 0 || sm_list > INT16_MAX);
     am->sm_list = (uint16_t)sm_list;
     am->priority = priority;
@@ -607,7 +619,9 @@ void DetectPktMpmRegisterByParentId(DetectEngineCtx *de_ctx,
             DetectBufferMpmRegistry *am = SCCalloc(1, sizeof(*am));
             BUG_ON(am == NULL);
             am->name = t->name;
+#ifdef PROFILING
             snprintf(am->pname, sizeof(am->pname), "%s#%d", am->name, id);
+#endif
             DEBUG_VALIDATE_BUG_ON(id < 0 || id > INT16_MAX);
             am->sm_list = (uint16_t)id; // use new id
             am->sm_list_base = t->sm_list;

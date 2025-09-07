@@ -396,7 +396,7 @@ static int PrefilterMpmHttpRequestBodyRegister(DetectEngineCtx *de_ctx, SigGroup
 
     return PrefilterAppendTxEngine(de_ctx, sgh, PrefilterTxHttpRequestBody, mpm_reg->app_v2.alproto,
             mpm_reg->app_v2.tx_min_progress, pectx, PrefilterMpmHttpRequestBodyFree,
-            mpm_reg->pname);
+            PREFILTER_PROF_NAME(mpm_reg));
 }
 
 #ifdef UNITTESTS

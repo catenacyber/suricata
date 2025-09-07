@@ -1406,7 +1406,6 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
     return 0;
 }
 
-
 #ifdef PROFILING
 /* hash table for assigning a unique id to each engine type. */
 static uint32_t PrefilterStoreHashFunc(HashListTable *ht, void *data, uint16_t datalen)
@@ -1603,9 +1602,9 @@ int PrefilterGenericMpmRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh, MpmC
     pectx->mpm_ctx = mpm_ctx;
     pectx->transforms = &mpm_reg->transforms;
 
-    int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpm,
-        mpm_reg->app_v2.alproto, mpm_reg->app_v2.tx_min_progress,
-        pectx, PrefilterGenericMpmFree, mpm_reg->pname);
+    int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpm, mpm_reg->app_v2.alproto,
+            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterGenericMpmFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }
@@ -1625,7 +1624,8 @@ int PrefilterSingleMpmRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh, MpmCt
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMpmTxSingle, mpm_reg->app_v2.alproto,
-            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterGenericMpmFree, mpm_reg->pname);
+            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterGenericMpmFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }
@@ -1678,7 +1678,8 @@ int PrefilterMultiGenericMpmRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
     pectx->transforms = &mpm_reg->transforms;
 
     int r = PrefilterAppendTxEngine(de_ctx, sgh, PrefilterMultiMpm, mpm_reg->app_v2.alproto,
-            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterMultiGenericMpmFree, mpm_reg->pname);
+            mpm_reg->app_v2.tx_min_progress, pectx, PrefilterMultiGenericMpmFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }
@@ -1747,8 +1748,8 @@ int PrefilterGenericMpmPktRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh, M
     pectx->transforms = &mpm_reg->transforms;
 
     enum SignatureHookPkt hook = SIGNATURE_HOOK_PKT_NOT_SET; // TODO review
-    int r = PrefilterAppendEngine(
-            de_ctx, sgh, PrefilterMpmPkt, 0, hook, pectx, PrefilterMpmPktFree, mpm_reg->pname);
+    int r = PrefilterAppendEngine(de_ctx, sgh, PrefilterMpmPkt, 0, hook, pectx, PrefilterMpmPktFree,
+            PREFILTER_PROF_NAME(mpm_reg));
     if (r != 0) {
         SCFree(pectx);
     }

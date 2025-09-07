@@ -51,6 +51,12 @@ typedef struct PrefilterStore_ {
 } PrefilterStore;
 #endif
 
+#ifdef PROFILING
+#define PREFILTER_PROF_NAME(x) (x)->pname
+#else
+#define PREFILTER_PROF_NAME(x) (x)->name
+#endif
+
 void Prefilter(DetectEngineThreadCtx *, const SigGroupHead *, Packet *p, const uint8_t flags,
         const SignatureMask mask);
 

@@ -761,7 +761,9 @@ enum DetectBufferMpmType {
 /** \brief one time registration of keywords at start up */
 typedef struct DetectBufferMpmRegistry_ {
     const char *name;
+#ifdef PROFILING
     char pname[32];             /**< name used in profiling */
+#endif
     int direction;              /**< SIG_FLAG_TOSERVER or SIG_FLAG_TOCLIENT */
     int16_t sm_list;
     int16_t sm_list_base;
