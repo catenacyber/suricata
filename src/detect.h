@@ -1554,7 +1554,6 @@ typedef struct PrefilterEngineList_ {
     /** Free function for pectx data. If NULL the memory is not freed. */
     void (*Free)(void *pectx);
 
-    const char *name;
     /* global id for this prefilter */
     uint32_t gid;
 } PrefilterEngineList;

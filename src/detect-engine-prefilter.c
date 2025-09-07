@@ -312,8 +312,7 @@ int PrefilterAppendEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh, PrefilterP
         e->id = t->id + 1;
     }
 
-    e->name = name;
-    e->gid = PrefilterStoreGetId(de_ctx, e->name, e->Free);
+    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
     return 0;
 }
 
@@ -344,8 +343,7 @@ int PrefilterAppendPayloadEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->name = name;
-    e->gid = PrefilterStoreGetId(de_ctx, e->name, e->Free);
+    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
     return 0;
 }
 
@@ -381,8 +379,7 @@ int PrefilterAppendTxEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->name = name;
-    e->gid = PrefilterStoreGetId(de_ctx, e->name, e->Free);
+    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
     return 0;
 }
 
@@ -416,8 +413,7 @@ int PrefilterAppendFrameEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->name = name;
-    e->gid = PrefilterStoreGetId(de_ctx, e->name, e->Free);
+    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
     return 0;
 }
 
@@ -449,8 +445,7 @@ int PrefilterAppendPostRuleEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->name = name;
-    e->gid = PrefilterStoreGetId(de_ctx, e->name, e->Free);
+    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
     return 0;
 }
 
