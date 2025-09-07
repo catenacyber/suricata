@@ -227,11 +227,9 @@ void DetectAppLayerMpmRegisterByParentId(DetectEngineCtx *de_ctx,
                 } else {
                     strlcpy(toprint, xforms,sizeof(toprint));
                 }
-                (void)snprintf(am->pname, sizeof(am->pname), "%s#%d (%s)",
-                        am->name, id, toprint);
+                (void)snprintf(am->pname, sizeof(am->pname), "%d#%s (%s)", id, am->name, toprint);
             } else {
-                (void)snprintf(am->pname, sizeof(am->pname), "%s#%d",
-                        am->name, id);
+                (void)snprintf(am->pname, sizeof(am->pname), "%d#%s", id, am->name);
             }
 #endif
             am->id = de_ctx->app_mpms_list_cnt++;
@@ -384,7 +382,7 @@ void DetectFrameMpmRegisterByParentId(DetectEngineCtx *de_ctx, const int id, con
             BUG_ON(am == NULL);
             am->name = t->name;
 #ifdef PROFILING
-            snprintf(am->pname, sizeof(am->pname), "%s#%d", am->name, id);
+            snprintf(am->pname, sizeof(am->pname), "%d#%s", id, am->name);
 #endif
             DEBUG_VALIDATE_BUG_ON(id < 0 || id > UINT16_MAX);
             am->sm_list = (uint16_t)id; // use new id
@@ -620,7 +618,7 @@ void DetectPktMpmRegisterByParentId(DetectEngineCtx *de_ctx,
             BUG_ON(am == NULL);
             am->name = t->name;
 #ifdef PROFILING
-            snprintf(am->pname, sizeof(am->pname), "%s#%d", am->name, id);
+            snprintf(am->pname, sizeof(am->pname), "%d#%s", id, am->name);
 #endif
             DEBUG_VALIDATE_BUG_ON(id < 0 || id > INT16_MAX);
             am->sm_list = (uint16_t)id; // use new id
