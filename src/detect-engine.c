@@ -1596,7 +1596,9 @@ static void DetectBufferTypeSetupDetectEngine(DetectEngineCtx *de_ctx)
         b = HashListTableGetListNext(b);
     }
 
+#ifdef PROFILING
     PrefilterInit(de_ctx);
+#endif
     DetectMpmInitializeAppMpms(de_ctx);
     DetectAppLayerInspectEngineCopyListToDetectCtx(de_ctx);
     DetectMpmInitializeFrameMpms(de_ctx);
@@ -1649,7 +1651,9 @@ static void DetectBufferTypeFreeDetectEngine(DetectEngineCtx *de_ctx)
             SCFree(framemlist);
             framemlist = next;
         }
+#ifdef PROFILING
         PrefilterDeinit(de_ctx);
+#endif
     }
 }
 

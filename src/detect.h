@@ -1093,7 +1093,9 @@ typedef struct DetectEngineCtx_ {
     uint32_t frame_mpms_list_cnt;
 
     uint32_t prefilter_id;
+#ifdef PROFILING
     HashListTable *prefilter_hash_table;
+#endif
 
     /** time of last ruleset reload */
     struct timeval last_reload;
@@ -1554,8 +1556,10 @@ typedef struct PrefilterEngineList_ {
     /** Free function for pectx data. If NULL the memory is not freed. */
     void (*Free)(void *pectx);
 
+#ifdef PROFILING
     /* global id for this prefilter */
     uint32_t gid;
+#endif
 } PrefilterEngineList;
 
 typedef struct PrefilterEngine_ {
@@ -1590,8 +1594,13 @@ typedef struct PrefilterEngine_ {
                 DetectEngineThreadCtx *det_ctx, const void *pectx, Packet *p, Flow *f);
     } cb;
 
+    /** Free function for pectx data. If NULL the memory is not freed. */
+    void (*Free)(void *pectx);
+
+#ifdef PROFILING
     /* global id for this prefilter */
     uint32_t gid;
+#endif
 } PrefilterEngine;
 
 typedef struct SigGroupHeadInitData_ {

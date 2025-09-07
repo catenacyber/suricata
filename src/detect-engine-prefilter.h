@@ -44,11 +44,12 @@ typedef struct DetectTransaction_ {
     const int tx_end_state;
 } DetectTransaction;
 
+#ifdef PROFILING
 typedef struct PrefilterStore_ {
     const char *name;
-    void (*FreeFunc)(void *);
     uint32_t id;
 } PrefilterStore;
+#endif
 
 void Prefilter(DetectEngineThreadCtx *, const SigGroupHead *, Packet *p, const uint8_t flags,
         const SignatureMask mask);
@@ -88,11 +89,9 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh);
 void PrefilterCleanupRuleGroup(const DetectEngineCtx *de_ctx, SigGroupHead *sgh);
 
 #ifdef PROFILING
-const char *PrefilterStoreGetName(const uint32_t id);
-#endif
-
 void PrefilterInit(DetectEngineCtx *de_ctx);
 void PrefilterDeinit(DetectEngineCtx *de_ctx);
+#endif
 
 int PrefilterGenericMpmRegister(DetectEngineCtx *de_ctx, SigGroupHead *sgh, MpmCtx *mpm_ctx,
         const DetectBufferMpmRegistry *mpm_reg, int list_id);

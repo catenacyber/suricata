@@ -60,10 +60,11 @@
 #include "util-validate.h"
 #include "util-hash-string.h"
 
-static int PrefilterStoreGetId(DetectEngineCtx *de_ctx,
-        const char *name, void (*FreeFunc)(void *));
+#ifdef PROFILING
+static int PrefilterStoreGetId(DetectEngineCtx *de_ctx, const char *name);
 static const PrefilterStore *PrefilterStoreGetStore(const DetectEngineCtx *de_ctx,
         const uint32_t id);
+#endif
 
 static inline void QuickSortSigIntId(SigIntId *sids, uint32_t n)
 {
@@ -312,7 +313,9 @@ int PrefilterAppendEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh, PrefilterP
         e->id = t->id + 1;
     }
 
-    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
+#ifdef PROFILING
+    e->gid = PrefilterStoreGetId(de_ctx, name);
+#endif
     return 0;
 }
 
@@ -343,7 +346,9 @@ int PrefilterAppendPayloadEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
+#ifdef PROFILING
+    e->gid = PrefilterStoreGetId(de_ctx, name);
+#endif
     return 0;
 }
 
@@ -379,7 +384,9 @@ int PrefilterAppendTxEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
+#ifdef PROFILING
+    e->gid = PrefilterStoreGetId(de_ctx, name);
+#endif
     return 0;
 }
 
@@ -413,7 +420,9 @@ int PrefilterAppendFrameEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
+#ifdef PROFILING
+    e->gid = PrefilterStoreGetId(de_ctx, name);
+#endif
     return 0;
 }
 
@@ -445,7 +454,9 @@ int PrefilterAppendPostRuleEngine(DetectEngineCtx *de_ctx, SigGroupHead *sgh,
         e->id = t->id + 1;
     }
 
-    e->gid = PrefilterStoreGetId(de_ctx, name, e->Free);
+#ifdef PROFILING
+    e->gid = PrefilterStoreGetId(de_ctx, name);
+#endif
     return 0;
 }
 
@@ -468,16 +479,13 @@ void PrefilterFreeEnginesList(PrefilterEngineList *list)
     }
 }
 
-static void PrefilterFreeEngines(const DetectEngineCtx *de_ctx, PrefilterEngine *list)
+static void PrefilterFreeEngines(PrefilterEngine *list)
 {
     PrefilterEngine *t = list;
-
     while (1) {
-        const PrefilterStore *s = PrefilterStoreGetStore(de_ctx, t->gid);
-        if (s && s->FreeFunc && t->pectx) {
-            s->FreeFunc(t->pectx);
+        if (t && t->Free && t->pectx) {
+            t->Free(t->pectx);
         }
-
         if (t->is_last)
             break;
         t++;
@@ -488,23 +496,23 @@ static void PrefilterFreeEngines(const DetectEngineCtx *de_ctx, PrefilterEngine 
 void PrefilterCleanupRuleGroup(const DetectEngineCtx *de_ctx, SigGroupHead *sgh)
 {
     if (sgh->pkt_engines) {
-        PrefilterFreeEngines(de_ctx, sgh->pkt_engines);
+        PrefilterFreeEngines(sgh->pkt_engines);
         sgh->pkt_engines = NULL;
     }
     if (sgh->payload_engines) {
-        PrefilterFreeEngines(de_ctx, sgh->payload_engines);
+        PrefilterFreeEngines(sgh->payload_engines);
         sgh->payload_engines = NULL;
     }
     if (sgh->tx_engines) {
-        PrefilterFreeEngines(de_ctx, sgh->tx_engines);
+        PrefilterFreeEngines(sgh->tx_engines);
         sgh->tx_engines = NULL;
     }
     if (sgh->frame_engines) {
-        PrefilterFreeEngines(de_ctx, sgh->frame_engines);
+        PrefilterFreeEngines(sgh->frame_engines);
         sgh->frame_engines = NULL;
     }
     if (sgh->post_rule_match_engines) {
-        PrefilterFreeEngines(de_ctx, sgh->post_rule_match_engines);
+        PrefilterFreeEngines(sgh->post_rule_match_engines);
         sgh->post_rule_match_engines = NULL;
     }
 }
@@ -1215,7 +1223,10 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
             e->ctx.pkt.hook = (uint8_t)el->pkt_hook;
             e->pectx = el->pectx;
             el->pectx = NULL; // e now owns the ctx
+#ifdef PROFILING
             e->gid = el->gid;
+#endif
+            e->Free = el->Free;
             if (el->next == NULL) {
                 e->is_last = true;
             }
@@ -1244,7 +1255,10 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
             e->ctx.pkt.hook = (uint8_t)el->pkt_hook;
             e->pectx = el->pectx;
             el->pectx = NULL; // e now owns the ctx
+#ifdef PROFILING
             e->gid = el->gid;
+#endif
+            e->Free = el->Free;
             if (el->next == NULL) {
                 e->is_last = true;
             }
@@ -1271,7 +1285,10 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
             e->cb.PrefilterTx = el->PrefilterTx;
             e->pectx = el->pectx;
             el->pectx = NULL; // e now owns the ctx
+#ifdef PROFILING
             e->gid = el->gid;
+#endif
+            e->Free = el->Free;
             e++;
         }
 
@@ -1347,7 +1364,10 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
             e->alproto = el->alproto;
             e->pectx = el->pectx;
             el->pectx = NULL; // e now owns the ctx
+#ifdef PROFILING
             e->gid = el->gid;
+#endif
+            e->Free = el->Free;
             if (el->next == NULL) {
                 e->is_last = true;
             }
@@ -1373,7 +1393,10 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
             e->cb.PrefilterPostRule = el->PrefilterPostRule;
             e->pectx = el->pectx;
             el->pectx = NULL; // e now owns the ctx
+#ifdef PROFILING
             e->gid = el->gid;
+#endif
+            e->Free = el->Free;
             e->is_last = (el->next == NULL);
             e++;
         }
@@ -1383,8 +1406,9 @@ int PrefilterSetupRuleGroup(DetectEngineCtx *de_ctx, SigGroupHead *sgh)
     return 0;
 }
 
-/* hash table for assigning a unique id to each engine type. */
 
+#ifdef PROFILING
+/* hash table for assigning a unique id to each engine type. */
 static uint32_t PrefilterStoreHashFunc(HashListTable *ht, void *data, uint16_t datalen)
 {
     PrefilterStore *ctx = data;
@@ -1430,10 +1454,9 @@ void PrefilterInit(DetectEngineCtx *de_ctx)
     BUG_ON(de_ctx->prefilter_hash_table == NULL);
 }
 
-static int PrefilterStoreGetId(DetectEngineCtx *de_ctx,
-        const char *name, void (*FreeFunc)(void *))
+static int PrefilterStoreGetId(DetectEngineCtx *de_ctx, const char *name)
 {
-    PrefilterStore ctx = { name, FreeFunc, 0 };
+    PrefilterStore ctx = { name, 0 };
 
     BUG_ON(de_ctx->prefilter_hash_table == NULL);
 
@@ -1450,7 +1473,6 @@ static int PrefilterStoreGetId(DetectEngineCtx *de_ctx,
     }
 
     actx->name = name;
-    actx->FreeFunc = FreeFunc;
     actx->id = de_ctx->prefilter_id++;
     SCLogDebug("prefilter engine %s has profile id %u", actx->name, actx->id);
 
@@ -1468,7 +1490,6 @@ static int PrefilterStoreGetId(DetectEngineCtx *de_ctx,
 static const PrefilterStore *PrefilterStoreGetStore(const DetectEngineCtx *de_ctx,
         const uint32_t id)
 {
-
     const PrefilterStore *store = NULL;
     if (de_ctx->prefilter_hash_table != NULL) {
         HashListTableBucket *hb = HashListTableGetListHead(de_ctx->prefilter_hash_table);
@@ -1481,12 +1502,6 @@ static const PrefilterStore *PrefilterStoreGetStore(const DetectEngineCtx *de_ct
         }
     }
     return store;
-}
-
-#ifdef PROFILING
-const char *PrefilterStoreGetName(const uint32_t id)
-{
-    return NULL;
 }
 #endif
 
