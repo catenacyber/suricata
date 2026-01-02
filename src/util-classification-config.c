@@ -249,7 +249,7 @@ int SCClassConfAddClasstype(DetectEngineCtx *de_ctx, char *rawstr, uint16_t inde
         SCLogError("Invalid Classtype in "
                    "classification.config file %s: \"%s\"",
                 SCClassConfGetConfFilename(de_ctx), rawstr);
-        goto error;
+        return -1;
     }
 
     size_t copylen = sizeof(ct_name);
@@ -258,7 +258,7 @@ int SCClassConfAddClasstype(DetectEngineCtx *de_ctx, char *rawstr, uint16_t inde
             de_ctx->class_conf_regex_match, 1, (PCRE2_UCHAR8 *)ct_name, &copylen);
     if (ret < 0) {
         SCLogInfo("pcre2_substring_copy_bynumber() failed");
-        goto error;
+        return -1;
     }
 
     /* retrieve the classtype description */
@@ -267,7 +267,7 @@ int SCClassConfAddClasstype(DetectEngineCtx *de_ctx, char *rawstr, uint16_t inde
             de_ctx->class_conf_regex_match, 2, (PCRE2_UCHAR8 *)ct_desc, &copylen);
     if (ret < 0) {
         SCLogInfo("pcre2_substring_copy_bynumber() failed");
-        goto error;
+        return -1;
     }
 
     /* retrieve the classtype priority */
@@ -276,34 +276,33 @@ int SCClassConfAddClasstype(DetectEngineCtx *de_ctx, char *rawstr, uint16_t inde
             de_ctx->class_conf_regex_match, 3, (PCRE2_UCHAR8 *)ct_priority_str, &copylen);
     if (ret < 0) {
         SCLogInfo("pcre2_substring_copy_bynumber() failed");
-        goto error;
+        return -1;
     }
     if (StringParseUint32(&ct_priority, 10, 0, (const char *)ct_priority_str) < 0) {
-        goto error;
+        return -1;
     }
 
     /* Create a new instance of the parsed Classtype string */
     ct_new = SCClassConfAllocClasstype(ct_id, ct_name, ct_desc, ct_priority);
     if (ct_new == NULL)
-        goto error;
+        return -1;
 
     /* Check if the Classtype is present in the HashTable.  In case it's present
      * ignore it, as it is a duplicate.  If not present, add it to the table */
     ct_lookup = HashTableLookup(de_ctx->class_conf_ht, ct_new, 0);
     if (ct_lookup == NULL) {
-        if (HashTableAdd(de_ctx->class_conf_ht, ct_new, 0) < 0)
-            SCLogDebug("HashTable Add failed");
+        if (HashTableAdd(de_ctx->class_conf_ht, ct_new, 0) == 0) {
+            return 0;
+        }
+        SCLogDebug("HashTable Add failed");
     } else {
         SCLogDebug("Duplicate classtype found inside classification.config");
-        if (ct_new->classtype_desc) SCFree(ct_new->classtype_desc);
-        if (ct_new->classtype) SCFree(ct_new->classtype);
-        SCFree(ct_new);
     }
-
-    return 0;
-
- error:
-    return -1;
+    if (ct_new->classtype_desc)
+        SCFree(ct_new->classtype_desc);
+    if (ct_new->classtype)
+        SCFree(ct_new->classtype);
+    SCFree(ct_new);
 }
 
 /**
