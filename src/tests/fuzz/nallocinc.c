@@ -198,19 +198,20 @@ extern "C"
     // Start the failure injections, using a buffer as seed
     static int nalloc_start(const uint8_t *data, size_t size)
     {
-        if (nalloc_random_bitmask) {
-            if (nalloc_random_state & 0x10) {
-                nalloc_bitmask = 0xFFFFFFFF;
-            } else {
-                nalloc_bitmask = 1 << (5 + (nalloc_random_state & 0xF));
-            }
-        } else if (nalloc_bitmask == 0) {
+        if (!nalloc_random_bitmask && nalloc_bitmask == 0) {
             // nalloc disabled
             return 0;
         }
         nalloc_random_state = 0;
         for (size_t i = 0; i < size; i++) {
             nalloc_random_update(data[i]);
+        }
+        if (nalloc_random_bitmask) {
+            if (nalloc_random_state & 0x10) {
+                nalloc_bitmask = 0xFFFFFFFF;
+            } else {
+                nalloc_bitmask = 1 << (5 + (nalloc_random_state & 0xF));
+            }
         }
         if (__sync_fetch_and_add(&nalloc_running, 1)) {
             __sync_fetch_and_sub(&nalloc_running, 1);
