@@ -37,7 +37,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         SigTableSetup();
         if (initialized == 0) {
             nalloc_init(NULL);
-            nalloc_restrict_file_prefix(3);
             SC_ATOMIC_SET(engine_stage, SURICATA_RUNTIME);
             initialized = 1;
         }
