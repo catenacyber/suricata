@@ -92,18 +92,34 @@ pub fn sc_log_message(
     return 0;
 }
 
+// custom wrapper to implement custom as_ptr on it
+struct LogString {
+    data: Vec<u8>,
+}
+
+impl LogString {
+    pub fn as_ptr(&self) -> c_void {
+        if self.data.is_empty() {
+            std::ptr::null()
+        }
+        self.data.as_ptr()
+    }
+}
+
 // Convert a &str into a CString by first stripping NUL bytes.
-fn to_safe_cstring(val: &str) -> CString {
-    let mut safe = Vec::with_capacity(val.len());
+fn to_safe_cstring(val: &str) -> LogString {
+    let mut safe = Vec::new();
+    let safe = match safe.try_reserve(val.len() + 1) {
+        Ok(s) => s,
+        _ => {return LogString{data: Vec::new()};}
+    }
     for c in val.as_bytes() {
         if *c != 0 {
             safe.push(*c);
         }
     }
-    match CString::new(safe) {
-        Ok(cstr) => cstr,
-        _ => CString::new("<failed to encode string>").unwrap(),
-    }
+    safe.push(0);
+    return LogString{data: safe};
 }
 
 // This macro returns the function name.
