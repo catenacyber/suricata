@@ -37,34 +37,39 @@ struct DetectTransformDecompressData {
 }
 
 const DEFAULT_MAX_SIZE: u32 = 1024;
+// 16 MiB
+const ABSOLUTE_MAX_SIZE: u32 = 16*1024*1024;
 
 fn decompress_parse_do(s: &str) -> Option<DetectTransformDecompressData> {
     let mut max_size_parsed = None;
     for p in s.split(',') {
         let kv: Vec<&str> = p.split('=').collect();
         if kv.len() != 2 {
-            SCLogError!("Bad key value for gunzip {}", p);
+            SCLogError!("Bad key value for decompress transform {}", p);
             return None;
         }
         match kv[0] {
             "max-size" => {
                 if max_size_parsed.is_some() {
-                    SCLogError!("Multiple max-size values for gunzip");
+                    SCLogError!("Multiple max-size values for decompress transform");
                     return None;
                 }
                 if let Ok((_, val)) = detect_parse_uint_with_unit::<u32>(kv[1]) {
                     if val == 0 {
-                        SCLogError!("max-size 0 for gunzip would always produce an empty buffer");
+                        SCLogError!("max-size 0 for decompress transform would always produce an empty buffer");
+                        return None;
+                    } else if val > ABSOLUTE_MAX_SIZE {
+                        SCLogError!("max-size is too big > {}", ABSOLUTE_MAX_SIZE);
                         return None;
                     }
                     max_size_parsed = Some(val);
                 } else {
-                    SCLogError!("Invalid max-size value for gunzip {}", kv[1]);
+                    SCLogError!("Invalid max-size value for decompress transform {}", kv[1]);
                     return None;
                 }
             }
             _ => {
-                SCLogError!("Unknown key for gunzip {}", kv[0]);
+                SCLogError!("Unknown key for decompress transform {}", kv[0]);
                 return None;
             }
         }
