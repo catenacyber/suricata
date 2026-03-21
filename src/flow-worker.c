@@ -357,43 +357,9 @@ static inline void UpdateCounters(ThreadVars *tv,
     }
 }
 
-/** \brief update stream engine
- *
- *  We can be called from both the flow timeout path as well as from the
- *  "real" traffic path. If in the timeout path any additional packets we
- *  forge for flushing pipelines should not leave our scope. If the original
- *  packet is real (or related to a real packet) we need to push the packets
- *  on, so IPS logic stays valid.
- */
-static inline void FlowWorkerStreamTCPUpdate(ThreadVars *tv, FlowWorkerThreadData *fw, Packet *p,
+static inline void FlowWorkerProcessQueue(ThreadVars *tv, FlowWorkerThreadData *fw, Packet *p,
         DetectEngineThreadCtx *det_ctx, const bool timeout)
 {
-    if (det_ctx != NULL && det_ctx->de_ctx->PreStreamHook != NULL) {
-        const uint8_t action = det_ctx->de_ctx->PreStreamHook(tv, det_ctx, p);
-        if (action & ACTION_DROP) {
-            PacketDrop(p, ACTION_DROP, PKT_DROP_REASON_STREAM_PRE_HOOK);
-            return;
-        }
-    }
-
-    FLOWWORKER_PROFILING_START(p, PROFILE_FLOWWORKER_STREAM);
-    StreamTcp(tv, p, fw->stream_thread, &fw->pq);
-    FLOWWORKER_PROFILING_END(p, PROFILE_FLOWWORKER_STREAM);
-
-    // this is the first packet that sets no payload inspection
-    bool setting_nopayload =
-            p->flow->alparser &&
-            SCAppLayerParserStateIssetFlag(p->flow->alparser, APP_LAYER_PARSER_NO_INSPECTION) &&
-            !(p->flags & PKT_NOPAYLOAD_INSPECTION);
-    if (FlowChangeProto(p->flow) || setting_nopayload) {
-        StreamTcpDetectLogFlush(tv, fw->stream_thread, p->flow, p, &fw->pq);
-        if (setting_nopayload) {
-            FlowSetNoPayloadInspectionFlag(p->flow);
-        }
-        SCAppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TS);
-        SCAppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TC);
-    }
-
     /* Packets here can safely access p->flow as it's locked */
     SCLogDebug("packet %" PRIu64 ": extra packets %u", PcapPacketCntGet(p), fw->pq.len);
     Packet *x;
@@ -427,6 +393,44 @@ static inline void FlowWorkerStreamTCPUpdate(ThreadVars *tv, FlowWorkerThreadDat
             TmqhOutputPacketpool(tv, x);
         }
     }
+}
+/** \brief update stream engine
+ *
+ *  We can be called from both the flow timeout path as well as from the
+ *  "real" traffic path. If in the timeout path any additional packets we
+ *  forge for flushing pipelines should not leave our scope. If the original
+ *  packet is real (or related to a real packet) we need to push the packets
+ *  on, so IPS logic stays valid.
+ */
+static inline void FlowWorkerStreamTCPUpdate(
+        ThreadVars *tv, FlowWorkerThreadData *fw, Packet *p, DetectEngineThreadCtx *det_ctx)
+{
+    if (det_ctx != NULL && det_ctx->de_ctx->PreStreamHook != NULL) {
+        const uint8_t action = det_ctx->de_ctx->PreStreamHook(tv, det_ctx, p);
+        if (action & ACTION_DROP) {
+            PacketDrop(p, ACTION_DROP, PKT_DROP_REASON_STREAM_PRE_HOOK);
+            return;
+        }
+    }
+
+    FLOWWORKER_PROFILING_START(p, PROFILE_FLOWWORKER_STREAM);
+    StreamTcp(tv, p, fw->stream_thread, &fw->pq);
+    FLOWWORKER_PROFILING_END(p, PROFILE_FLOWWORKER_STREAM);
+
+    // this is the first packet that sets no payload inspection
+    bool setting_nopayload =
+            p->flow->alparser &&
+            SCAppLayerParserStateIssetFlag(p->flow->alparser, APP_LAYER_PARSER_NO_INSPECTION) &&
+            !(p->flags & PKT_NOPAYLOAD_INSPECTION);
+    if (FlowChangeProto(p->flow) || setting_nopayload) {
+        StreamTcpDetectLogFlush(tv, fw->stream_thread, p->flow, p, &fw->pq);
+        if (setting_nopayload) {
+            FlowSetNoPayloadInspectionFlag(p->flow);
+        }
+        SCAppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TS);
+        SCAppLayerParserStateSetFlag(p->flow->alparser, APP_LAYER_PARSER_EOF_TC);
+    }
+
     if (FlowChangeProto(p->flow) && p->flow->flags & FLOW_ACTION_DROP) {
         // in case f->flags & FLOW_ACTION_DROP was set by one of the dequeued packets
         PacketDrop(p, ACTION_DROP, PKT_DROP_REASON_FLOW_DROP);
@@ -444,7 +448,8 @@ static void FlowWorkerFlowTimeout(
     DEBUG_ASSERT_FLOW_LOCKED(p->flow);
 
     /* handle TCP and app layer */
-    FlowWorkerStreamTCPUpdate(tv, fw, p, det_ctx, true);
+    FlowWorkerStreamTCPUpdate(tv, fw, p, det_ctx);
+    FlowWorkerProcessQueue(tv, fw, p, det_ctx, true);
 
     PacketUpdateEngineEventCounters(tv, fw->dtv, p);
 
@@ -648,7 +653,7 @@ static TmEcode FlowWorker(ThreadVars *tv, Packet *p, void *data)
                 DisableDetectFlowFileFlags(p->flow);
             }
 
-            FlowWorkerStreamTCPUpdate(tv, fw, p, det_ctx, false);
+            FlowWorkerStreamTCPUpdate(tv, fw, p, det_ctx);
             PacketAppUpdate2FlowFlags(p);
 
             /* handle the app layer part of the UDP packet payload */
@@ -669,6 +674,9 @@ static TmEcode FlowWorker(ThreadVars *tv, Packet *p, void *data)
         FLOWWORKER_PROFILING_START(p, PROFILE_FLOWWORKER_DETECT);
         Detect(tv, p, det_ctx);
         FLOWWORKER_PROFILING_END(p, PROFILE_FLOWWORKER_DETECT);
+    }
+    if (p->flow && PacketIsTCP(p)) {
+        FlowWorkerProcessQueue(tv, fw, p, det_ctx, false);
     }
 
 pre_flow_drop:
