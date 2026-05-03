@@ -1270,7 +1270,11 @@ static int HtpResponseBodyHandle(HtpState *hstate, HtpTxUserData *htud, const ht
      * we check for htp_tx_response_line(tx) in case of junk
      * interpreted as body before response line
      */
-    if (!(htud->tcflags & HTP_FILENAME_SET)) {
+    if (!(htud->tcflags & HTP_RESP_BODY_SEEN)) {
+        // make sure we run this only once per tx
+        // so that we do not retry/refail to parse Content-Disposition header
+        // which may be expensive if we do it for every packet...
+        htud->tcflags |= HTP_RESP_BODY_SEEN;
         SCLogDebug("setting up file name");
 
         const uint8_t *filename = NULL;
@@ -1538,7 +1542,10 @@ static int HTPCallbackResponseBodyData(const htp_connp_t *connp, htp_tx_data_t *
         if (tx_ud->tcflags & HTP_FILENAME_SET) {
             SCLogDebug("closing file that was being stored");
             (void)HTPFileClose(tx_ud, NULL, 0, FILE_TRUNCATED, STREAM_TOCLIENT);
-            tx_ud->tcflags &= ~HTP_FILENAME_SET;
+            // This is wrong but keeps SV test bug-6617 behaviour
+            // We should not reset HTP_RESP_BODY_SEEN
+            // And we should not reopen a file
+            tx_ud->tcflags &= ~(HTP_FILENAME_SET | HTP_RESP_BODY_SEEN);
         }
     }
 
@@ -1815,7 +1822,7 @@ static int HTPCallbackResponseComplete(const htp_connp_t *connp, htp_tx_t *tx)
     if (htud->tcflags & HTP_FILENAME_SET) {
         SCLogDebug("closing file that was being stored");
         (void)HTPFileClose(htud, NULL, 0, 0, STREAM_TOCLIENT);
-        htud->tcflags &= ~HTP_FILENAME_SET;
+        htud->tcflags &= ~(HTP_FILENAME_SET | HTP_RESP_BODY_SEEN);
     }
 
     /* response done, do raw reassembly now to inspect state and stream
