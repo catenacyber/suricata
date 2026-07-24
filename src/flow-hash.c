@@ -1109,7 +1109,7 @@ Flow *FlowGetFromFlowKey(FlowKey *key, struct timespec *ttime, const uint32_t ha
     f->dst.addr_data32[3] = key->dst.addr_data32[3];
     f->sp = key->sp;
     f->dp = key->dp;
-    f->recursion_level = 0;
+    f->recursion_level = key->recursion_level;
     // f->livedev is set by caller EBPFCreateFlowForKey
     f->flow_hash = hash;
     if (key->src.family == AF_INET) {
