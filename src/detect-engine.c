@@ -2361,9 +2361,14 @@ uint8_t DetectEngineInspectMultiBufferGeneric(DetectEngineCtx *de_ctx,
         local_id++;
     } while (1);
     if (local_id == 0) {
+        AppProto tx_proto = f->alproto;
+        if (f->alproto == ALPROTO_DOH2 && engine->alproto == ALPROTO_DOH2) {
+            // use DNS as the tx passed from DetectGetInnerTx is a DNS one
+            tx_proto = ALPROTO_DNS;
+        }
         // That means we did not get even one buffer value from the multi-buffer
-        const bool eof = (AppLayerParserGetStateProgress(f->proto, f->alproto, txv, flags) >
-                          engine->progress);
+        const bool eof =
+                (AppLayerParserGetStateProgress(f->proto, tx_proto, txv, flags) > engine->progress);
         if (eof && engine->match_on_null) {
             return DETECT_ENGINE_INSPECT_SIG_MATCH;
         }
